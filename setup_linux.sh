@@ -26,12 +26,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 /home/linuxbrew/.linuxbrew/bin/brew bundle install --file=./Brewfile
 
-
-# Install JAVA
-sudo apt install openjdk-17-jdk
-
-
-
 # Download first p10k fonts
 curl -L https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf --output 'MesloGS NF Regular.ttf'
 curl -L https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf --output 'MesloGS NF Bold.ttf'
@@ -43,12 +37,13 @@ mv *.ttf ~/.local/share/fonts
 fc-cache -f -v # Refresh font cache
 
 
-rm ~/.zshrc # Remove generated zshrc by OMZ
-rm ~/.p10k.zsh # Remove generated zshrc by OMZ
 # Last create sym links to .dotfiles repositores
-./create_sim_links.sh
+sh setup_sym_links.sh
+Z4H_BOOTSTRAPPING=1 . ~/.zshenv
 
 
+# Install JAVA
+sudo apt install openjdk-17-jdk
 
 # Install Docker
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin

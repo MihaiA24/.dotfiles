@@ -6,13 +6,5 @@ brew "btop"
 brew "eza"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Theme for zsh
-brew "powerlevel10k"
-# UNIX shell (command interpreter)
-brew "zsh"
-# Fish-like fast/unobtrusive autosuggestions for zsh
-brew "zsh-autosuggestions"
-# Fish shell like syntax highlighting for zsh
-brew "zsh-syntax-highlighting"
-# ZSH plugin that reminds you to use existing aliases for commands you just typed
-brew "zsh-you-should-use"
+# Interactive GPU process monitor
+brew "nvtop"
