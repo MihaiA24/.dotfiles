@@ -1,5 +1,7 @@
 # In this scripts go all CMD lines that can be executed from scratch without 0 addional config or manual download
 
+sudo apt update && sudo apt upgrade -y
+
 # First add source repositories
 sh ./setup_source_repositories.sh
 
@@ -13,9 +15,6 @@ curl -fsS https://dl.brave.com/install.sh | sh
 
 # Install ZED editor
 curl -f https://zed.dev/install.sh | sh
-##  Add Zed to ZSH
-echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
 
 
 # Install UV python package manager
@@ -24,6 +23,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+sudo apt-get install build-essential # Homebrew recommendation
 /home/linuxbrew/.linuxbrew/bin/brew bundle install --file=./Brewfile
 
 # Download first p10k fonts
@@ -37,14 +37,13 @@ mv *.ttf ~/.local/share/fonts
 fc-cache -f -v # Refresh font cache
 
 
-# Last create sym links to .dotfiles repositores
-sh setup_sym_links.sh
-Z4H_BOOTSTRAPPING=1 . ~/.zshenv
-
-
 # Install JAVA
 sudo apt install openjdk-17-jdk
 
 # Install Docker
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker ${USER}
+
+# Last create sym links to .dotfiles repositores
+sh setup_sym_links.sh
+Z4H_BOOTSTRAPPING=1 . ~/.zshenv
