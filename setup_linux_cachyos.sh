@@ -7,8 +7,21 @@ paru -S 1password
 paru -S visual-studio-code-bin # alternative paru -S code # This is the open source version
 paru -S jetbrains-toolbox
 paru -S paru -S jdk21-openjdk # The openjdk is availiable in cachy os ryzen repo
+paru -S ghostty # Terminal
+paru -S rustup
+rustup default stable # Install rust stable version
+paru -S miniconda3
+paru -S bruno
+paru -S telegram-desktop
+paru -S megasync-bin
+paru -S qbittorrent
+
+paru -S vlc
+paru -S mission-center # Windows like System Monitor
+
 # Docker
 paru -S docker
+paru -S nvidia-container-toolkit # Use docker with GPU support
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker $USER
