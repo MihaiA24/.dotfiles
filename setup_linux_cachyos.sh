@@ -15,6 +15,18 @@ paru -S bruno
 paru -S telegram-desktop
 paru -S megasync-bin
 paru -S qbittorrent
+paru -S dbeaver
+
+paru -S btop # Modern top
+paru -S nvtop # Modern top for nvidia GPU
+paru -S ncdu # Modern du
+# Already installed package by default installation in CachyOS
+# paru -S exa # Modern ls
+# paru -S bat # Modern cat
+# paru -S fd # Modern find
+# paru -S duf # Modern df
+# paru -S tldr # Modern man
+
 
 paru -S vlc
 paru -S mission-center # Windows like System Monitor
