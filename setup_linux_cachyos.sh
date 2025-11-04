@@ -16,6 +16,7 @@ paru -S telegram-desktop
 paru -S megasync-bin
 paru -S qbittorrent
 paru -S dbeaver
+paru -S zip
 
 paru -S btop # Modern top
 paru -S nvtop # Modern top for nvidia GPU
