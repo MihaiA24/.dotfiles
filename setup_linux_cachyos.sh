@@ -29,6 +29,11 @@ paru -S ncdu # Modern du
 # paru -S tldr # Modern man
 
 
+# Proton suite
+paru -S proton-pass
+paru -S proton-vpn-gtk-app # Official Proton VPN app, available in CachyOS Repo
+
+
 paru -S vlc
 paru -S mission-center # Windows like System Monitor
 
