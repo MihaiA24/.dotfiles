@@ -4,4 +4,5 @@ rm -r ~/.config/fish
 
 
 ln -s ~/.dotfiles/.gitconfig ~/.gitconfig
+ln -s ~/.dotfiles/.gitignore ~/.gitignore
 ln -s ~/.dotfiles/fish ~/.config/fish
