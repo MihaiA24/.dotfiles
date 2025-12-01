@@ -1,3 +1,6 @@
 [user]
-	email = 93051145+MihaiA24@users.noreply.github.com
+	email = git.rule370@passmail.net
 	name = Mihai Aftinescu
+[core]
+	autocrlf = true
+	excludesFile = ~/.gitignore
