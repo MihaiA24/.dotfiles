@@ -2,5 +2,5 @@
 	email = git.rule370@passmail.net
 	name = Mihai Aftinescu
 [core]
-	autocrlf = true
+	autocrlf = input
 	excludesFile = ~/.gitignore
