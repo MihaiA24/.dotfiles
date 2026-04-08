@@ -17,10 +17,10 @@ paru -S uv # Package manager for python
 paru -S paru -S jdk21-openjdk # The openjdk is availiable in cachy os ryzen repo
 
 # Other programs
-paru -S telegram-desktop 
+paru -S telegram-desktop
 paru -S megasync-bin # Mega sync cloud
 paru -S qbittorrent # Open source torrent client
-paru -S discord 
+paru -S discord
 paru -S google-chrome # Chrome browser
 paru -S brave-bin # Brave browser
 paru -S anytype-bin # P2P note taking app
@@ -33,7 +33,7 @@ paru -S todoist-appimage # Daily planner app
 paru -S btop # Modern top
 paru -S nvtop # Modern top for nvidia GPU
 paru -S ncdu # Modern du
-paru -S zip 
+paru -S zip
 paru -S neovim
 # Already installed package by default installation in CachyOS
 # paru -S exa # Modern ls
@@ -61,3 +61,18 @@ sudo usermod -aG docker $USER
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # sudo apt-get install build-essential # Homebrew recommendation
 # /home/linuxbrew/.linuxbrew/bin/brew bundle install --file=./Brewfile
+paru -S aws-cli-v2
+paru -S balena-etcher
+paru -S bitwarden
+paru -S claude-code
+paru -S dos2unix
+paru -S flameshot
+paru -S gnome-boxes
+paru -S graphviz
+paru -S mise # The front-end to your dev env. Use multiple versions on same system
+paru -S rustup
+paru -S snapper # CachyOS Btrfs automatic snapshots
+paru -S speedtest++
+paru -S superfile # Fancy terminal file manager
+paru -S todoist-rs
+paru -S windsurf
