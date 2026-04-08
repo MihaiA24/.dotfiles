@@ -37,3 +37,6 @@ else
     end
 end
 # <<< conda initialize <<<
+
+# uv
+fish_add_path "/home/mihai/.local/bin"
