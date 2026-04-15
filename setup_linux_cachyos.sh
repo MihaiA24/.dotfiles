@@ -10,11 +10,17 @@ paru -S jetbrains-toolbox
 paru -S dbeaver # Open source database management tool
 paru -S bruno # Postman alternative
 paru -S ghostty # Terminal
+paru -S claude-code
+paru -S gemini-cli
+paru -S windsurf
+# paru -S ollama-cuda # Install if using local LLMs
+
 
 # Programming languages software
 paru -S uv # Package manager for python
 # paru -S miniconda3 # Using uv by default
 paru -S paru -S jdk21-openjdk # The openjdk is availiable in cachy os ryzen repo
+paru -S rustup
 
 # Other programs
 paru -S telegram-desktop
@@ -35,6 +41,8 @@ paru -S nvtop # Modern top for nvidia GPU
 paru -S ncdu # Modern du
 paru -S zip
 paru -S neovim
+paru -S aws-cli-v2
+
 # Already installed package by default installation in CachyOS
 # paru -S exa # Modern ls
 # paru -S bat # Modern cat
@@ -56,23 +64,15 @@ sudo systemctl enable docker
 sudo usermod -aG docker $USER
 
 
-# Install Homebrew
-# TODO: Don't know if its is necesary having paru
-# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# sudo apt-get install build-essential # Homebrew recommendation
-# /home/linuxbrew/.linuxbrew/bin/brew bundle install --file=./Brewfile
-paru -S aws-cli-v2
 paru -S balena-etcher
 paru -S bitwarden
-paru -S claude-code
 paru -S dos2unix
 paru -S flameshot
 paru -S gnome-boxes
 paru -S graphviz
 paru -S mise # The front-end to your dev env. Use multiple versions on same system
-paru -S rustup
 paru -S snapper # CachyOS Btrfs automatic snapshots
 paru -S speedtest++
 paru -S superfile # Fancy terminal file manager
 paru -S todoist-rs
-paru -S windsurf
+paru -S gnome-shell-extension-installer # Use: gnome-shell-extension-installer <extension-id>
