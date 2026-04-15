@@ -76,3 +76,6 @@ paru -S speedtest++
 paru -S superfile # Fancy terminal file manager
 paru -S todoist-rs
 paru -S gnome-shell-extension-installer # Use: gnome-shell-extension-installer <extension-id>
+
+# Install rust packages cli
+cargo install lean-ctx
