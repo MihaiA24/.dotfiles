@@ -6,11 +6,35 @@
 
 set -euo pipefail
 
-# ── Claude Code CLI ────────────────────────────────────────────────────────────
+# ── AI tools ───────────────────────────────────────────────────────────────────
 # Installs to ~/.local/bin/claude
 # https://claude.ai/download
 install_claude() {
   curl -fsSL https://claude.ai/install.sh | bash
+}
+
+# Hermes Agent CLI
+# https://github.com/NousResearch/hermes-agent
+install_hermes_agent() {
+  curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+}
+
+# Understand-Anything plugin for Hermes
+# https://github.com/Lum1104/Understand-Anything
+install_understand_anything_hermes() {
+  curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh | bash -s hermes
+}
+
+# LeanCTX context layer
+# https://github.com/yvgude/lean-ctx
+install_lean_ctx() {
+  curl -fsSL https://leanctx.com/install.sh | sh
+}
+
+# Oh My Pi / Pi Coding Agent
+# https://github.com/can1357/oh-my-pi
+install_oh_my_pi() {
+  curl -fsSL https://omp.sh/install | sh
 }
 
 # ── Rust + Cargo ───────────────────────────────────────────────────────────────

@@ -23,9 +23,20 @@ brew bundle --file=~/.dotfiles/Brewfile
 
 Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./setup_non_brew.sh). The file is structured as named functions — source or copy the relevant section rather than running the whole script.
 
+### AI tools
+
 | Tool | Install method |
 |---|---|
 | Claude Code CLI | `curl -fsSL https://claude.ai/install.sh \| bash` |
+| Hermes Agent | `curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \| bash` |
+| Understand-Anything for Hermes | `curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh \| bash -s hermes` |
+| LeanCTX | `curl -fsSL https://leanctx.com/install.sh \| sh` |
+| Oh My Pi / Pi Coding Agent | `curl -fsSL https://omp.sh/install \| sh` |
+
+### Other tools
+
+| Tool | Install method |
+|---|---|
 | Rust + Cargo | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | zsh4humans | Auto-bootstrapped by `.zshenv`; see `install_z4h()` in the script |
 | uv (Linux) | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
