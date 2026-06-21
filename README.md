@@ -42,3 +42,21 @@ Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./se
 | uv (Linux) | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Docker (Linux) | `curl -fsSL https://get.docker.com \| bash` |
 | Powerlevel10k fonts (Linux) | See `install_p10k_fonts_linux()` in the script |
+
+
+## Agentic environment bootstrap
+
+The agent tooling stack can be installed and validated from a fresh container using
+the `agentic-env` compose smoke-test setup.
+
+- See [`agentic-env/README.md`](./agentic-env/README.md) for:
+  - build/run instructions
+  - fresh-install smoke contract
+  - image-size/tradeoff rationale and compatibility notes
+- CI gate:
+  - `.github/workflows/agentic-env-smoke-test.yml` runs fresh-install smoke checks on:
+    - `push` / `pull_request` for changes under `agentic-env/`
+    - `workflow_dispatch` / UI **Run workflow** for manual trigger
+- Design decision log:
+  - [`agentic-env/docs/CONTEXT.md`](./agentic-env/docs/CONTEXT.md)
+  - [`agentic-env/docs/adr/0001-container-base-for-fresh-agent-installs.md`](./agentic-env/docs/adr/0001-container-base-for-fresh-agent-installs.md)
