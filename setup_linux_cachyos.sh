@@ -1,81 +1,108 @@
 # In this scripts go all CMD lines that can be executed from scratch without 0 addional config or manual download
 
-sudo paru # Update all installed
+VERBOSE="${VERBOSE:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    -v|--verbose)
+      VERBOSE=1
+      ;;
+    *)
+      ;;
+  esac
+done
+export VERBOSE
+_run_log="$(mktemp -t dotfiles-run.XXXXXX)"
+cleanup_run_log() {
+  rm -f "$_run_log"
+}
+trap cleanup_run_log EXIT
 
+run_cmd() {
+  : >"$_run_log"
+  if [ "$VERBOSE" = "1" ]; then
+    sh -c "$*"
+    return
+  fi
+
+  if ! sh -c "$*" >"$_run_log" 2>&1; then
+    echo "Command failed: $*" >&2
+    cat "$_run_log" >&2
+    return 1
+  fi
+}
+
+run_cmd "sudo paru" # Update all installed
 
 # Code tools
-paru -S zed
-paru -S visual-studio-code-bin # alternative paru -S code # This is the open source version
-paru -S jetbrains-toolbox
-paru -S dbeaver # Open source database management tool
-paru -S bruno # Postman alternative
-paru -S ghostty # Terminal
-paru -S claude-code
-paru -S gemini-cli
-paru -S windsurf
-# paru -S ollama-cuda # Install if using local LLMs
-
+run_cmd "paru -S zed"
+run_cmd "paru -S visual-studio-code-bin" # alternative paru -S code # This is the open source version
+run_cmd "paru -S jetbrains-toolbox"
+run_cmd "paru -S dbeaver" # Open source database management tool
+run_cmd "paru -S bruno" # Postman alternative
+run_cmd "paru -S ghostty" # Terminal
+run_cmd "paru -S claude-code"
+run_cmd "paru -S gemini-cli"
+run_cmd "paru -S windsurf"
+# run_cmd "paru -S ollama-cuda" # Install if using local LLMs
 
 # Programming languages software
-paru -S uv # Package manager for python
-# paru -S miniconda3 # Using uv by default
-paru -S paru -S jdk21-openjdk # The openjdk is availiable in cachy os ryzen repo
-paru -S rustup
+run_cmd "paru -S uv" # Package manager for python
+# run_cmd "paru -S miniconda3" # Using uv by default
+run_cmd "paru -S paru -S jdk21-openjdk" # The openjdk is availiable in cachy os ryzen repo
+run_cmd "paru -S rustup"
 
 # Other programs
-paru -S telegram-desktop
-paru -S megasync-bin # Mega sync cloud
-paru -S qbittorrent # Open source torrent client
-paru -S discord
-paru -S google-chrome # Chrome browser
-paru -S brave-bin # Brave browser
-paru -S anytype-bin # P2P note taking app
-paru -S vlc vlc-plugins-all
-paru -S mission-center # Windows like System Monitor
-paru -S todoist-appimage # Daily planner app
+run_cmd "paru -S telegram-desktop"
+run_cmd "paru -S megasync-bin" # Mega sync cloud
+run_cmd "paru -S qbittorrent" # Open source torrent client
+run_cmd "paru -S discord"
+run_cmd "paru -S google-chrome" # Chrome browser
+run_cmd "paru -S brave-bin" # Brave browser
+run_cmd "paru -S anytype-bin" # P2P note taking app
+run_cmd "paru -S vlc vlc-plugins-all"
+run_cmd "paru -S mission-center" # Windows like System Monitor
+run_cmd "paru -S todoist-appimage" # Daily planner app
 
-
-## Command line tools
-paru -S btop # Modern top
-paru -S nvtop # Modern top for nvidia GPU
-paru -S ncdu # Modern du
-paru -S zip
-paru -S neovim
-paru -S aws-cli-v2
+# Command line tools
+run_cmd "paru -S btop" # Modern top
+run_cmd "paru -S nvtop" # Modern top for nvidia GPU
+run_cmd "paru -S ncdu" # Modern du
+run_cmd "paru -S zip"
+run_cmd "paru -S neovim"
+run_cmd "paru -S aws-cli-v2"
 
 # Already installed package by default installation in CachyOS
-# paru -S exa # Modern ls
-# paru -S bat # Modern cat
-# paru -S fd # Modern find
-# paru -S duf # Modern df
-# paru -S tldr # Modern man
-
+# run_cmd "paru -S exa" # Modern ls
+# run_cmd "paru -S bat" # Modern cat
+# run_cmd "paru -S fd" # Modern find
+# run_cmd "paru -S duf" # Modern df
+# run_cmd "paru -S tldr" # Modern man
 
 # Proton suite
-paru -S proton-pass
-paru -S proton-vpn-gtk-app # Official Proton VPN app, available in CachyOS Repo
-
+run_cmd "paru -S proton-pass"
+run_cmd "paru -S proton-vpn-gtk-app" # Official Proton VPN app, available in CachyOS Repo
 
 # Docker
-paru -S docker docker-buildx docker-compose
-paru -S nvidia-container-toolkit # Use docker with GPU support
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker $USER
+run_cmd "paru -S docker docker-buildx docker-compose"
+run_cmd "paru -S nvidia-container-toolkit" # Use docker with GPU support
+run_cmd "sudo systemctl start docker"
+run_cmd "sudo systemctl enable docker"
+run_cmd "sudo usermod -aG docker $USER"
 
-
-paru -S balena-etcher
-paru -S bitwarden
-paru -S dos2unix
-paru -S flameshot
-paru -S gnome-boxes
-paru -S graphviz
-paru -S mise # The front-end to your dev env. Use multiple versions on same system
-paru -S snapper # CachyOS Btrfs automatic snapshots
-paru -S speedtest++
-paru -S superfile # Fancy terminal file manager
-paru -S todoist-rs
-paru -S gnome-shell-extension-installer # Use: gnome-shell-extension-installer <extension-id>
+run_cmd "paru -S balena-etcher"
+run_cmd "paru -S bitwarden"
+run_cmd "paru -S dos2unix"
+run_cmd "paru -S flameshot"
+run_cmd "paru -S gnome-boxes"
+run_cmd "paru -S graphviz"
+run_cmd "paru -S mise" # The front-end to your dev env. Use multiple versions on same system
+run_cmd "paru -S snapper" # CachyOS Btrfs automatic snapshots
+run_cmd "paru -S speedtest++"
+run_cmd "paru -S superfile" # Fancy terminal file manager
+run_cmd "paru -S todoist-rs"
+run_cmd "paru -S gnome-shell-extension-installer" # Use: gnome-shell-extension-installer <extension-id>
 
 # Install rust packages cli
-cargo install lean-ctx
+run_cmd "cargo install lean-ctx"
+
+echo "setup_linux_cachyos complete"
