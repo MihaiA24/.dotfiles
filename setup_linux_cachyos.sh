@@ -19,6 +19,9 @@ trap cleanup_run_log EXIT
 
 run_cmd() {
   : >"$_run_log"
+  if [ "$VERBOSE" != "1" ]; then
+    echo "Running: $*"
+  fi
   if [ "$VERBOSE" = "1" ]; then
     sh -c "$*"
     return
