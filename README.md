@@ -19,6 +19,13 @@ To install everything from the Brewfile on a new machine:
 brew bundle --file=~/.dotfiles/Brewfile
 ```
 
+## Fish plugins
+
+Fish plugins are declared in [`fish/fish_plugins`](./fish/fish_plugins).
+`setup_sym_links_cachyos.sh` bootstraps Fisher and runs `fisher update` after
+linking `~/.config/fish`; generated Tide functions/completions are not tracked.
+Only the canonical `fish/fish_variables` file is kept in git.
+
 ## Non-Homebrew installs
 
 Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./setup_non_brew.sh). The file is structured as named functions — source or copy the relevant section rather than running the whole script.
