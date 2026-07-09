@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic Stack Map</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+  <header class="topbar">
+    <nav class="nav" aria-label="Reference navigation">
+      <strong>Agentic Stack Map</strong>
+      <span class="links">
+        <a href="../lessons/0001-llm-agentic-workflow-presentation.html">Presentation</a>
+        <a href="../RESOURCES.md">Resources</a>
+      </span>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="reference-card">
+      <p class="eyebrow">Quick reference</p>
+      <h1>Four layers, two focus harnesses, three context options.</h1>
+      <p class="lede">Use this as the handout: OMP and Hermes are the focus harnesses; Matt Pocock, caveman, and Karpathy rules are the behavior layer; LeanCTX is the used context MCP; RTK and Headroom are alternatives; Codebase Memory and AgentMemory handle long-lived context.</p>
+    </section>
+
+    <section class="reference-card" id="layers">
+      <h2>The layer map</h2>
+      <div class="stack-map">
+        <div class="layer">
+          <div class="label">1. Harness</div>
+          <div class="body">
+            <p><strong>Job:</strong> run the agent session, permissions, UI, tool execution, and session state.</p>
+            <p><strong>Focus:</strong> OMP / Oh My Pi and Hermes.</p>
+            <p><strong>Alternatives:</strong> OpenCode, Codex CLI, Claude Code, Cursor, and other MCP-compatible clients.</p>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="label">2. Skill</div>
+          <div class="body">
+            <p><strong>Job:</strong> change the agent’s behavior with reusable instructions and support files.</p>
+            <p><strong>Focus:</strong> Matt Pocock `ask-matt`/`tdd`, caveman compression, Karpathy-style coding rules.</p>
+            <p><strong>Alternatives:</strong> project-local skills, team-specific runbooks, workflow-specific skills.</p>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="label">3. MCP server</div>
+          <div class="body">
+            <p><strong>Job:</strong> expose tools, resources, and prompts to the harness through a standard protocol.</p>
+            <p><strong>Used:</strong> LeanCTX / `lean-ctx` for compressed local context access.</p>
+            <p><strong>Alternatives:</strong> RTK for command-output token reduction; Headroom for general MCP compression/retrieval.</p>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="label">4. Memory</div>
+          <div class="body">
+            <p><strong>Job:</strong> keep useful context available after the immediate chat.</p>
+            <p><strong>Structural:</strong> `codebase-memory-mcp` stores a rebuildable graph of code relationships.</p>
+            <p><strong>Narrative:</strong> `agentmemory` stores session history, rationale, preferences, and discoveries.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="reference-card" id="pipeline">
+      <h2>Development pipeline diagram</h2>
+      <div class="pipeline">
+        <div class="node used">
+          <span class="tag">Ask</span>
+          <h3>User goal</h3>
+          <p>Audience, time box, focus, constraints.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">Route</span>
+          <h3>Harness + skills</h3>
+          <p>OMP/Hermes mental model plus Matt Pocock, caveman, Karpathy rules.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">Context</span>
+          <h3>MCP layer</h3>
+          <p>LeanCTX first; RTK/Headroom as alternatives.</p>
+        </div>
+        <div class="node memory">
+          <span class="tag">Memory</span>
+          <h3>Long-lived handling</h3>
+          <p>Codebase graph for structure; AgentMemory for narrative.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">Verify</span>
+          <h3>Check artifacts</h3>
+          <p>Parse HTML, check coverage, open presentation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="reference-card" id="matt-flow">
+      <h2>Matt Pocock implementation order</h2>
+      <div class="pipeline">
+        <div class="node used">
+          <span class="tag">1 · Shape</span>
+          <h3>wayfinder / grill-with-docs</h3>
+          <p>Use `wayfinder` for foggy multi-session work. Use `grill-with-docs` when the codebase and project docs can sharpen the idea now.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">2 · Specify</span>
+          <h3>to-spec</h3>
+          <p>Convert the shaped idea into a concrete spec with behavior, constraints, boundaries, and acceptance criteria.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">3 · Split</span>
+          <h3>to-tickets</h3>
+          <p>Break the spec into tracer-bullet tickets with dependencies and clear verification per ticket.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">4 · Build</span>
+          <h3>implement</h3>
+          <p>Execute one ticket at a time. Pull in TDD internally when behavior can be locked with red → green tests.</p>
+        </div>
+        <div class="node used">
+          <span class="tag">5 · Review</span>
+          <h3>code review</h3>
+          <p>Review against standards and spec before declaring the change complete.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="reference-card" id="matrix">
+      <h2>Decision matrix</h2>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Need</th>
+            <th>Use first</th>
+            <th>Alternatives / complements</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Run local coding session</td>
+            <td>OMP</td>
+            <td>Hermes when sessions/skills/MCP management are the stronger fit</td>
+            <td>Harness owns the working loop and tool boundary.</td>
+          </tr>
+          <tr>
+            <td>Run agent workflow across surfaces</td>
+            <td>Hermes</td>
+            <td>OMP for terminal-heavy implementation loops</td>
+            <td>Harness choice is about where the session lives.</td>
+          </tr>
+          <tr>
+            <td>Run the actual implementation flow</td>
+            <td>wayfinder/grill-with-docs → to-spec → to-tickets → implement → code review</td>
+            <td>`tdd` runs inside implementation when behavior can be tested red → green</td>
+            <td>This order prevents building before the problem is shaped and specified.</td>
+          </tr>
+          <tr>
+            <td>Communicate with low noise</td>
+            <td>Caveman skills</td>
+            <td>Normal prose for security warnings or complex irreversible actions</td>
+            <td>Compression helps when exact technical content is preserved.</td>
+          </tr>
+          <tr>
+            <td>Keep coding changes surgical</td>
+            <td>Karpathy rules</td>
+            <td>Project-specific engineering standards</td>
+            <td>Prevents over-engineering and unverified broad edits.</td>
+          </tr>
+          <tr>
+            <td>Read/search repo context efficiently</td>
+            <td>LeanCTX / `lean-ctx`</td>
+            <td>Headroom for general compression; RTK for command-output reduction</td>
+            <td>Context size must be actively managed.</td>
+          </tr>
+          <tr>
+            <td>Ask structural code questions</td>
+            <td>`codebase-memory-mcp`</td>
+            <td>LSP or text search only after graph results need verification</td>
+            <td>Callers, callees, routes, architecture, and impact are graph-shaped questions.</td>
+          </tr>
+          <tr>
+            <td>Remember rationale across sessions</td>
+            <td>`agentmemory`</td>
+            <td>Plain-text ADRs for accepted costly decisions</td>
+            <td>Narrative recall is different from structural code lookup.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="reference-card" id="details">
+      <h2>Detailed presenter notes by layer</h2>
+      <div class="detail-list">
+        <article class="card">
+          <h3>Harness detail</h3>
+          <p><strong>Explain:</strong> the harness is the runtime and permission boundary. OMP is the terminal-first local development loop. Hermes is the agent surface with first-class skills, MCP management, sessions, and memory configuration.</p>
+          <p><strong>Do not imply:</strong> harnesses automatically solve context quality or memory. They expose and coordinate the pieces that do.</p>
+        </article>
+        <article class="card">
+          <h3>Skill detail</h3>
+          <p><strong>Explain:</strong> Matt Pocock skills define the implementation order: `wayfinder`/`grill-with-docs` to shape, `to-spec` to specify, `to-tickets` to split, `implement` to build, and `code-review` to check.</p>
+          <p><strong>Do not imply:</strong> `implement` is the first step. It belongs after the problem is shaped, specified, and ticketed.</p>
+        </article>
+        <article class="card">
+          <h3>Context MCP detail</h3>
+          <p><strong>Explain:</strong> context MCPs reduce waste before content reaches the model. LeanCTX is the used local context runtime. RTK targets noisy command output. Headroom targets broad content compression/retrieval.</p>
+          <p><strong>Do not imply:</strong> all token savers have the same scope. File exploration, shell output, and general tool-output compression are different problems.</p>
+        </article>
+        <article class="card">
+          <h3>Memory detail</h3>
+          <p><strong>Explain:</strong> Codebase Memory MCP is structural: symbols, calls, routes, architecture, impact. AgentMemory is narrative: preferences, rationale, session history, decisions-in-progress.</p>
+          <p><strong>Do not imply:</strong> generated memory is canonical truth. Accepted decisions and domain language should still be promoted to durable plain text.</p>
+        </article>
+      </div>
+    </section>
+
+
+    <section class="reference-card" id="long-term-memory-detail">
+      <h2>Long-term memory detail</h2>
+      <div class="architecture-board">
+        <div class="lane-row">
+          <div class="lane-label">Structural<br><small>codebase-memory-mcp</small></div>
+          <div class="lane-step memory"><h3>Input</h3><p>Repository files, symbols, calls, imports, routes, tests, and file relationships.</p></div>
+          <div class="lane-step memory"><h3>Store</h3><p>Rebuildable local code graph with nodes and edges for structural code questions.</p></div>
+          <div class="lane-step memory"><h3>Query</h3><p>Callers, callees, architecture, impact, routes, hotspots, dead-code candidates.</p></div>
+          <div class="lane-step memory"><h3>Boundary</h3><p>Great for structure; wrong place for rationale or accepted decisions.</p></div>
+        </div>
+        <div class="lane-row">
+          <div class="lane-label">Narrative<br><small>agentmemory</small></div>
+          <div class="lane-step memory"><h3>Input</h3><p>Conversation history, user preferences, decisions, discoveries, debugging history.</p></div>
+          <div class="lane-step memory"><h3>Store</h3><p>Persistent narrative recall across sessions, harness restarts, and compaction boundaries.</p></div>
+          <div class="lane-step memory"><h3>Query</h3><p>“Why did we choose this?”, “what did the user prefer?”, “what happened last time?”</p></div>
+          <div class="lane-step memory"><h3>Boundary</h3><p>Great for continuity; accepted decisions still belong in plain text docs/ADRs.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="reference-card" id="copy-links">
+      <h2>Copy-paste links</h2>
+      <pre><code>Model Context Protocol docs: https://modelcontextprotocol.io/docs/getting-started/intro
+MCP server features: https://modelcontextprotocol.io/specification/2025-11-25/server/index
+MCP GitHub organization: https://github.com/modelcontextprotocol
+OMP / Oh My Pi: https://omp.sh/
+OMP GitHub: https://github.com/can1357/oh-my-pi
+Hermes docs: https://hermes-agent.nousresearch.com/docs/
+Hermes MCP docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/
+Hermes Skills docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/skills
+Anthropic Agent Skills overview: https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview
+Claude Code skills docs: https://code.claude.com/docs/en/slash-commands
+LeanCTX docs: https://leanctx.com/docs/getting-started/
+LeanCTX tool reference: https://leanctx.com/docs/tools/
+LeanCTX GitHub: https://github.com/yvgude/lean-ctx
+RTK site: https://www.rtk-ai.app/
+RTK GitHub: https://github.com/rtk-ai/rtk
+Headroom site: https://headroomlabs.ai/
+Headroom docs: https://headroom-docs.vercel.app/docs
+Headroom MCP docs: https://headroom-docs.vercel.app/docs/mcp
+Headroom GitHub: https://github.com/chopratejas/headroom
+Codebase Memory MCP docs: https://deusdata.github.io/codebase-memory-mcp/
+Codebase Memory MCP GitHub: https://github.com/DeusData/codebase-memory-mcp
+AgentMemory docs: https://www.agent-memory.dev/
+AgentMemory GitHub: https://github.com/rohitg00/agentmemory</code></pre>
+    </section>
+    <section class="reference-card" id="script">
+      <h2>Speaker’s 60-second summary</h2>
+      <p>“The stack has four layers. OMP and Hermes are harnesses: they run the agent session. Skills are behavior: the Matt Pocock implementation path is wayfinder/grill-with-docs → to-spec → to-tickets → implement → code review; caveman compresses communication; Karpathy rules keep edits simple and verifiable. MCP servers are capability plugs. LeanCTX is the context layer used here; RTK and Headroom are alternatives for token reduction and compression. Long-lived handling splits again: Codebase Memory MCP gives a structural code graph, while AgentMemory keeps narrative session memory.”</p>
+    </section>
+  </main>
+</body>
+</html>
