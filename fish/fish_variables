@@ -68,8 +68,8 @@ SETUVAR _tide_prompt_9052:\x1b\x5bm\x1b\x5bm\uf17c\x1b\x5b38\x3b2\x3b148\x3b148\
 SETUVAR _tide_prompt_9157:\x1b\x5bm\x1b\x5bm\uf17c\x1b\x5b38\x3b2\x3b148\x3b148\x3b148m\x20\x1b\x5b49m\x40PWD\x40\x1b\x5bm\x20\x1e\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\u276e
 SETUVAR _tide_prompt_9698:\x1b\x5bm\x1b\x5bm\uf17c\x1b\x5b38\x3b2\x3b148\x3b148\x3b148m\x20\x1b\x5b49m\x40PWD\x40\x1b\x5bm\x20\x1e\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\u276e
 SETUVAR _tide_prompt_9793:\x1b\x5bm\x1b\x5bm\uf17c\x1b\x5b38\x3b2\x3b148\x3b148\x3b148m\x20\x1b\x5b49m\x40PWD\x40\x1b\x5b38\x3b2\x3b148\x3b148\x3b148m\x20\x1b\x5b49m\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\uf1d3\x20\x1b\x5b37m\x1b\x5b38\x3b2\x3b95\x3b215\x3b0mmain\x1b\x5b38\x3b2\x3b255\x3b0\x3b0m\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\x20\u21e11\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\x1b\x5b38\x3b2\x3b255\x3b0\x3b0m\x1b\x5b38\x3b2\x3b215\x3b175\x3b0m\x1b\x5b38\x3b2\x3b215\x3b175\x3b0m\x20\x212\x1b\x5b38\x3b2\x3b0\x3b175\x3b255m\x20\x3f3\x1b\x5bm\x20\x1e\x1b\x5b38\x3b2\x3b95\x3b215\x3b0m\u276e\x1e\x1b\x5bm\x20\x1b\x5b38\x3b2\x3b135\x3b135\x3b95\x3b49m\uf252\x2023s\x1b\x5b38\x3b2\x3b148\x3b148\x3b148m\x20\x1b\x5b38\x3b2\x3b0\x3b175\x3b175\x3b49m\U000f0320\x203\x2e13\x2e11\x20\x28fruits\x2dclassification\x29\x1b\x5bm
-SETUVAR _tide_right_items:status\x1ecmd_duration\x1econtext\x1ejobs\x1enode\x1epython\x1erustc\x1ejava\x1ego\x1eaws
-SETUVAR fish_user_paths:/home/mihai/\x2ecargo/bin\x1e/home/mihai/\x2elocal/bin\x1e/usr/bin
+SETUVAR _tide_right_items:status\x1ecmd_duration\x1econtext\x1ejobs\x1enode\x1epython\x1erustc\x1ejava\x1ego\x1ekubectl\x1eaws
+SETUVAR fish_user_paths:/home/mihai/\x2ebun/bin\x1e/home/mihai/\x2ecargo/bin\x1e/home/mihai/\x2elocal/bin\x1e/usr/bin
 SETUVAR pure_begin_prompt_with_current_directory:true
 SETUVAR pure_check_for_new_release:false
 SETUVAR pure_color_at_sign:pure_color_mute
@@ -139,6 +139,7 @@ SETUVAR pure_symbol_reverse_prompt:\u276e
 SETUVAR pure_symbol_ssh_prefix:
 SETUVAR pure_symbol_title_bar_separator:\x2d
 SETUVAR pure_symbol_virtualenv_prefix:
+SETUVAR pure_system_time_format:\x2b\x25T
 SETUVAR pure_threshold_command_duration:5
 SETUVAR pure_truncate_prompt_current_directory_keeps:\x2d1
 SETUVAR pure_truncate_window_title_current_directory_keeps:\x2d1
