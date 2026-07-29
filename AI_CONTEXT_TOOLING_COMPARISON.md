@@ -149,6 +149,32 @@ A 20× difference in strategy, and both choices have a measured price. Hermes pa
 
 **OMP costs 4.8× more per instruction and is 2.3× more autonomous per instruction.** Read those together before concluding anything: an OMP instruction is a bigger unit of work, so the ratio is not efficiency, it is granularity. What it does establish is that the two harnesses are not substitutes — you hand them different-sized jobs. OMP also asks the user 19× more often per instruction, which is either healthy checking-in or reluctance to commit, and the data cannot tell which.
 
+### Head-to-head quality, controlled
+
+Extracted 2026-07-28, one method applied to both stores: verification-shaped commands (test / lint / typecheck / build), exit code from the tool result.
+
+| Layer | OMP | Hermes | Reading |
+|---|---:|---:|---|
+| Per-command pass rate | **96.4%** (n=687) | 81.7% (n=2,734) | Cross-validates Hermes' own db (83.9%) |
+| Same project (`paw-backend`) | **98.4%** (n=319) | 79.2% (n=130) | Gap is not task mix |
+| Sessions ending green | 91.2% (n=57) | **94.2%** (n=326) | **Statistical tie** (OMP interval ±8 pp) |
+| Verification frequency | 2.7% of calls | **5.7%** | Hermes checks 2.1× more often |
+
+By model — the control that explains the gap:
+
+| Model | Harness | Pass rate | n |
+|---|---|---:|---:|
+| claude-fable-5 | OMP | **98.6%** | 365 |
+| claude-opus-5 | OMP | **98.1%** | 266 |
+| gpt-5.5 | Hermes | 84.5% | 1,585 |
+| gpt-5.6-sol | Hermes | 76.9% | 952 |
+| **gpt-5.3-codex-spark** | **OMP** | **73.5%** | 34 |
+| deepseek-v4-flash | Hermes | 69.7% | 99 |
+
+The decisive row is codex-spark **on OMP**: a GPT model running on OMP lands in Hermes' GPT band (74–85%), nowhere near OMP's Claude band (98%+). **The per-command gap is the model, not the harness.** Per-command pass rate also conflates quality with cadence — Hermes verifies mid-loop 2.1× more often, so red intermediate states depress its rate without implying worse outcomes, and the end-green tie confirms exactly that.
+
+**Model choice is the largest quality effect measured anywhere in this document** — larger than any tool, compressor, or memory system graded above. Caveats: task→model assignment was not random (careful work may be handed to Claude); end-green for OMP rests on 57 sessions; glm-5.2's 100% (n=56) is likely easy benchmark chores.
+
 ### Other harnesses — evidence, not enthusiasm
 
 | Harness | Installed | Usage evidence | Verdict |
@@ -492,15 +518,13 @@ Include rule: repo directly compresses, routes, or persists agent/LLM context or
 
 Everything above is settled or measured. These are not.
 
-### 1. The harness decision is deferred, not made
+### 1. The harness decision — provisionally settled, pending the benchmark
 
-OMP and Hermes are both in production and are **not substitutes** — 4.03 M tokens per instruction against 837 K, 26.3 autonomous turns against 11.3. The split is coherent, but nobody chose it; it accumulated. Choosing requires a paired measurement neither harness currently supports.
+**Recommendation adopted 2026-07-28: OMP as primary, tuned — not switched, and not as-is.** Grounds: quality is a statistical tie once the model confound is removed (see "Head-to-head quality, controlled"); OMP is the only harness here running the models that pass verification at ~98%; its snapshot-verified anchored edits avoid Hermes' measured 12.9% patch failure; and revealed preference — OMP active daily through 07-28, Hermes idle since 07-14. The harnesses are not substitutes (4.03 M vs 837 K tokens per instruction; 26.3 vs 11.3 turns), so this is a primary/secondary call, not a winner-take-all. The definitive answer still needs the paired benchmark in §3.
 
-### 2. The blocker: OMP records no outcomes
+### 2. The blocker — resolved twice over on 2026-07-28
 
-**A harness A/B is impossible today.** Hermes records verification events (83.9% pass over 248) and structured patch outcomes (12.9% failure over 5,877). OMP records neither — 172 `*.bash.log` files, zero `*.edit.log`, no exit codes, no pass rate. Any comparison run tomorrow would have a measured arm and an unmeasurable one.
-
-Instrumenting OMP is therefore a **prerequisite**, not a parallel task. It is also cheap: a hook that records `{command, kind, exit_code, session, cwd}` for lint/test/build invocations, mirroring `~/.hermes/verification_evidence.db`.
+The original blocker was that OMP recorded no outcomes. It fell two ways: a `tool_result` hook now writes `~/.omp/agent/verification_evidence.db` mirroring the Hermes schema (`omp/hooks/verification-recorder.ts`, branch `feat/agent-stack-measured-cleanup`), and OMP's session `.jsonl` turned out to carry `toolResult` rows all along — history was minable retroactively, which is what produced the controlled comparison above. What remains is accumulation: OMP's end-green estimate rests on n=57 sessions.
 
 ### 3. Proposed paired benchmark, once instrumentation exists
 
@@ -518,13 +542,15 @@ Modelled on the only two designs in this document that produced trustworthy numb
 
 **Cost anchor:** JetBrains spent ≈USD 106 (240 trials) and ≈USD 320 (425 trials) per tool; PointFive ran ≈5,500 billed executions. Budget accordingly, or accept a narrower claim.
 
-### 4. Cheap fixes that do not need the benchmark
+### 4. Cheap fixes — status
 
-| Fix | Cost | How it is verified |
-|---|---|---|
-| Dedupe Hermes lean-ctx registration (34 schemas → 17) | one config edit | tool count after restart |
-| OMP `write`:`edit` ratio — 3.15:1 against its own policy, on the top output-token consumer | policy/prompt change | ratio in subsequent sessions |
-| Remove agentmemory + node_repl from OMP (0 calls, 10 schemas) | one config edit | tool count after restart |
+| Fix | Status |
+|---|---|
+| ~~Dedupe Hermes lean-ctx registration~~ | **Retracted** — measurement showed a tool-name rename between Hermes versions (prefixes non-overlapping in time: 05-29→06-29 vs 07-11→07-14), not a duplicate. The second proposed fix this document killed by checking. |
+| Disable `agentmemory` + `node_repl` on OMP (0 calls, 10 schemas) | **Done 2026-07-28** via `disabledServers`; backup at `~/.omp/agent/mcp.json.bak` |
+| OMP verification recorder | **Done 2026-07-28** — 5 tests pass, store collecting |
+| OMP `write`:`edit` ratio 3.15:1 | Open — Q-D below |
+| Hermes' four dead MCP servers (147 calls, ~60–90 resident schemas) | Blocked on Q-F below |
 
 ### 5. Still unmeasured from the audit
 
@@ -533,6 +559,24 @@ Modelled on the only two designs in this document that produced trustworthy numb
 - **Item 11** — tool versions are pinned nowhere in this document, so no claim is reproducible six months out.
 - **Item 13** — no staleness policy for graph-versus-worktree divergence.
 - **opencode** — installed and configured, one session. A capability candidate with no evidence; including it would require running it, not reading about it.
+
+### 6. Tuning plan — open questions for the next grilling session
+
+Standing recommendation: **OMP as primary, tuned.** Each tuning item is parked as a question with a recommended default, so a future session can walk them one at a time. None is applied.
+
+**Q-A — What compaction threshold?** `compaction.thresholdTokens` is `-1` (provider default ≈ context limit), so context accretes to the ceiling before compaction and every turn re-reads it. Cache reads are ~69% of cost; average context follows a sawtooth up to the threshold, making this the single highest-leverage number in the stack. *Recommended default to grill: explicit 120–150 K.* Counterarguments: each compaction costs a summarization call plus cache re-priming at 1.25×, and loss risk compounds; the −34% figure is arithmetic, not measurement.
+
+**Q-B — `compaction.strategy = handoff`, or stay on `snapcompact`?** `handoff` is a *native* strategy (`context-full|handoff|shake|snapcompact|off`) and is precisely the Hermes unit-boundary pattern: 30% of its sessions end on compression, at 3.5 M tokens/session against OMP's 22.8 M. OMP's `/handoff` pipeline generates the summary via a cache-preserving oneshot and seeds a child session. *Recommended: one-week A/B judged on tokens/session and end-green from the recorder.* Grill: does the hard boundary lose context that OMP's deep sessions actually need? Note what died on inspection: Hermes' kanban (every table 0 rows — do not port), and "OMP under-delegates" (false: 219 subagent session files).
+
+**Q-C — What verification cadence?** Hermes verifies every ~18 tool calls, OMP every ~37; Hermes ends green 94.2% vs OMP's 91.2%. Proposal: a sibling hook to the recorder that nudges at ~N calls without verification and on `auto_compaction_start` ("go green before the boundary"). Hook, not skill — prose mandates measured 15.6% adherence even repeated three times; only force-injection has been shown to work.[J3] *Recommended default: N=25.* Grill: the constant, and whether nudges degrade long autonomous runs.
+
+**Q-D — Mechanism for the write:edit fix?** OMP writes whole files 3.15× more often than it edits, against its own tool policy, on the top output-token consumer (output = 12.8% of cost); Hermes shows the inverse strategy costs 12.9% patch failures instead. Candidates: a harness rule (observed firing mid-session and correcting behavior — the only prompt-adjacent mechanism with local evidence of working), a `tool_call` hook nudge, or prompt policy. *Recommended: rule first.* Grill: does discouraging `write` push the agent into worse substitutes (many fragment edits, or Hermes-style heredoc piping that evades measurement)?
+
+**Q-E — Formalize model routing?** The largest quality effect measured anywhere in this document: Claude-family passes verification at ~98%, GPT-family 74–85%, consistent across both harnesses (decisive control: gpt-5.3-codex-spark *on OMP* = 73.5%). *Recommended: pin verification-critical work to Claude-family via `modelRoles`; route volume work to cheaper models.* Grill: the cost delta of Claude-heavy routing against the quality gain, and the unresolved confound that task→model assignment was never random.
+
+**Q-F — What happens to Hermes?** Idle since 07-14 but holds the volume niche and donated both of the best tuning ideas (bounded units, verification cadence). Sub-questions: (a) keep for short-unit work, let fade, or decommission; (b) its four dead MCP servers — mempalace 24 calls, serena 36, codebase-memory-mcp 74, agentmemory 13, across 782 sessions — where disabling `agentmemory` is blocked on whether `memory.provider: agentmemory` is coupled to the MCP entry (answerable by reading `~/.hermes/hermes-agent/`); (c) `HERMES.md` carries a triplicated lean-ctx mandate measured at 15.6% adherence — delete it or scope it.
+
+**Q-G — When is the data enough to judge?** OMP end-green is n=57 (±8 pp) — too wide to detect any tuning effect smaller than ~10 pp. *Recommended: let the recorder accumulate ~2 weeks of normal use before judging Q-A/Q-B/Q-C, and pre-register what "improved" means (e.g. tokens/session −30%, end-green ≥ 94%) before looking.* The JetBrains ladder exists because k=1 lied to them twice; the same discipline applies here.
 
 [T1]: https://trendshift.io/ "Trendshift snapshot"
 [C1]: https://github.com/diegosouzapw/OmniRoute
