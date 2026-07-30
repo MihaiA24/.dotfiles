@@ -95,6 +95,22 @@ By model, pass rate: claude-fable-5 **98.6** · claude-opus-5 **98.1** · gpt-5.
 
 **Verdict: OMP primary (capability: Anthropic models, LSP, recoverable anchors; revealed preference), tuned via Hermes' two good ideas (bounded units, verification cadence). Not substitutes; definitive answer needs paired benchmark (§Open).** Others: opencode installed+configured, 1 session (capability candidate, zero evidence); Codex 73 / Claude Code 5 sessions, dormant; cursor=IDE; qwen/factory/continue/goose empty. Dead on inspection: Hermes kanban (0 rows), "OMP under-delegates" (219 subagent files), Hermes lean-ctx "duplicate" (version rename).
 
+## Skills on OMP — how selection works
+
+No selection algorithm. Startup scan → every discovered skill's `name`+`description` injected into system prompt → model self-picks by description → content lazy-loads via `skill://<name>`; `/skill:<name>` = manual force-inject. Dedup by name, first-wins across provider priority (`omp://skills.md`):
+
+| Pri | Provider | This host | Skills |
+|---:|---|---|---:|
+| 100 | native `.omp`/`.pi` | `~/.pi/agent/skills` (agentic-env-installed) | 40 |
+| 90 | omp-plugins | — | — |
+| 80 | claude | `~/.claude/skills` | 48 |
+| 70 | claude-plugins · agents · codex | — | — |
+| 55 | opencode | `~/.config/opencode/skills` | 1 |
+| 30 | github `.github/skills` | — | — |
+| 5 | omp-managed (autolearn) | `~/.omp/agent/managed-skills` | — |
+
+Same-name collision → higher pri wins (`ponytail` in both `.pi` and `.claude` → `.pi` copy served). Scan non-recursive: `<root>/skills/<name>/SKILL.md` only. Consequences: ~88 name+description entries ride **every** system prompt (item-8 cost, skill flavor); measured usage this corpus = 3 skills invoked per grilling session, `skill_view` heavy only on Hermes. Pruning levers exist, all unused: `skills.ignoredSkills` / `includeSkills` (globs), per-source toggles (`enableClaudeUser` etc.). Duplicate skill *sets* across `~/.claude` and `~/.pi` = same pack installed twice by different installers — dedup hides it, cost remains.
+
 ## Evidence
 
 Axes: **Independence** (1P vendor / 3P unaffiliated) · **Baseline** (arm named with number) · **Relevance** (agent-on-real-repos). A=3P+baseline+high · B=1P+baseline+harness · C=1P, baseline undisclosed · D=no measurement.
