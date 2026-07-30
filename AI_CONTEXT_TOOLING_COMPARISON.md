@@ -152,7 +152,7 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 
 **Time-gated:** hook live-load check (next session, see State); read-out 2026-08-11; then re-grill Q-A number, Q-C constant.
 
-**User decisions:** Q-F(a) Hermes fate (keep/fade/decommission — idle since 07-14); merge/push branch (6 commits); Q8 `~/.claude/CLAUDE.md` lean-ctx "native denied" block false on OMP — scope per harness (ADR-0007 consequence, undone); cbm demotion to on-demand (still mounted via claude discovery).
+**User decisions:** Q-F(a) Hermes fate (keep/fade/decommission — idle since 07-14); merge/push branch; Q8 `~/.claude/CLAUDE.md` lean-ctx "native denied" block false on OMP — scope per harness (ADR-0007 consequence, undone); cbm demotion to on-demand (still mounted via claude discovery); **Q-H skill prune** — ~88 skill name+descriptions ride every system prompt from `~/.pi/agent/skills` (40) + `~/.claude/skills` (48), duplicate packs installed twice by different installers, all pruning levers unused. *Recommended: `skills.includeSkills` allowlist from measured invocations, or drop the `.pi` duplicates at the installer.* Grill: allowlist maintenance cost vs description tax; whether rarely-used skills (grilling, domain-modeling) justify their ride-along.
 
 **Phase 2 (agentic-env, parked):** smoke contract still *requires* agentmemory on OMP — now contradicts ADR-0006/0007; per-tool gating support; Hermes CI gate; stack-doctor hook-conflict checks (Q3 decision, unimplemented; Claude Code has 4× cbm-session-reminder + 2 read-interception policies).
 
