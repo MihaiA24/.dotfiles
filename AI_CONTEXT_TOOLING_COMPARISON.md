@@ -12,12 +12,7 @@
 | Hermes | 4 dead MCP servers `enabled:false` (agentmemory·mempalace·serena·codebase-memory-mcp); HERMES.md 3 lean-ctx blocks → 1 | `config.yaml.bak-tuning`, `HERMES.md.bak-tuning` |
 | Memory | `backend: mnemopi`, `polyphonicRecall: false` (ADR-0006) | `/memory clear` before backend switch |
 
-**First check, next session:** hooks test-verified but never live-loaded. After any test/lint runs:
-
-```bash
-sqlite3 ~/.omp/agent/verification_evidence.db "select count(*) from verification_events"
-# 0 rows after a session that ran tests => hooks not loading => experiment measures nothing
-```
+**Checked 2026-08-05:** hooks live. 281 events (test 183, lint 94, build 2, typecheck 2), command pass rate 94.3%. The "0 rows ⇒ experiment measures nothing" failure did not occur; read-out proceeds 2026-08-11.
 
 **Read-out procedure (2026-08-11):**
 
@@ -48,10 +43,10 @@ Q-A/Q-B applied together → attribution is to the bundle, accepted.
 | Layer | Tool | Buys | Cost | Ev | Avoid |
 |---|---|---|---|---|---|
 | Host | **OMP core** | compaction, `read`, pruning, LSP/AST, lazy MCP | none | Host | disabling compaction |
-| Context I/O | OMP native + lean-ctx | lean-ctx carries 18.7% of real calls | 18 schemas; `ctx_patch` dropped (independent anchors) | C | any compressor on read→edit path: anchor corruption 27/40→15/40[P1]; Headroom **+48.4%**[P1] |
+| Context I/O | OMP native + lean-ctx **semantic-search-only (ADR-0008)** | sole non-native capability kept | 1 schema (was 18); kill-threshold: <5 semantic calls at 08-11 read-out → drop entirely | C | any compressor on read→edit path: anchor corruption 27/40→15/40[P1]; Headroom **+48.4%**[P1] |
 | Memory | **Mnemopi** | per-project transcript recall, local SQLite | KG layer is noise — `polyphonicRecall` off | D (local meas. only) | second memory owner |
 | Memory upgrade path | Hindsight vs **mem0** | re-evaluate at flip trigger (ADR-0006) | service+DB / platform-only headline | B | adopting before recall visibly fails |
-| Code graph | codebase-memory-mcp | persistent graph, Cypher, cross-repo | **−9 pts quality** (83 vs 92) for 10× tokens; 0.3% of calls | B | default-mounted; demote to on-demand (pending) |
+| Code graph | codebase-memory-mcp | persistent graph, Cypher, cross-repo | **−9 pts quality** (83 vs 92) for 10× tokens; 0.3% of calls | B | **decided 08-05:** registered-but-disabled, warm index, `fast` reindex at enable; litmus in §Open |
 | Terse output | Caveman | shorter output | measured **−8.5%**, not 65%[J1] | A | expecting vendor claim |
 | Less code | **Ponytail** | only measured *saving*: −10.3% cost[J3] | self-activates 0/10 — must force-inject | A | expecting −54% |
 
@@ -152,7 +147,11 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 
 **Time-gated:** hook live-load check (next session, see State); read-out 2026-08-11; then re-grill Q-A number, Q-C constant.
 
-**User decisions:** Q-F(a) Hermes fate (keep/fade/decommission — idle since 07-14); merge/push branch; Q8 `~/.claude/CLAUDE.md` lean-ctx "native denied" block false on OMP — scope per harness (ADR-0007 consequence, undone); cbm demotion to on-demand (still mounted via claude discovery); **Q-H skill prune** — ~88 skill name+descriptions ride every system prompt from `~/.pi/agent/skills` (40) + `~/.claude/skills` (48), duplicate packs installed twice by different installers, all pruning levers unused. *Recommended: `skills.includeSkills` allowlist from measured invocations, or drop the `.pi` duplicates at the installer.* Grill: allowlist maintenance cost vs description tax; whether rarely-used skills (grilling, domain-modeling) justify their ride-along.
+**Implemented 2026-08-05:** lean-ctx → semantic-search-only on OMP (ADR-0008). Mechanism: OMP-native `~/.omp/agent/mcp.json` entry shadows the `~/.claude.json` registration; `LEAN_CTX_TOOL_PROFILE=minimal` + `LEAN_CTX_DISABLED_TOOLS=ctx_read,ctx_shell,ctx_glob,ctx_tree,ctx_call`; verified stdio `tools/list` → `["ctx_search"]` (OMP mcp.json has no per-tool filter — gate is server-side env). cbm → `disabledServers` on OMP (registered in `~/.claude.json`, hidden by denylist; `/mcp enable` lifts it per the litmus, run `fast` reindex at enable). Q8 block scoped to Claude Code in `~/.claude/CLAUDE.md` (marker `lean-ctx-claude-v6` — a lean-ctx updater rewrite would clobber the scoping; re-check after `lean-ctx update`). **cbm litmus:** enable for a session only when the question needs >10 native calls, crosses repo boundaries, or aggregates the whole graph; **promotion trigger:** litmus firing ~weekly in a project → default-on for that project scope, re-measure quality there. Q-F(a) Hermes: parked for future introspection (user, 08-05).
+
+**Q-H implemented 2026-08-05:** curation moved to install time; no `includeSkills` layer. `skill-packs.json` is the curation point: mattpocock 13 (core `wayfinder`+`grill-with-docs`, transitive closure `grilling`/`domain-modeling`/`research`/`prototype`/`to-spec`/`to-tickets`/`implement`/`tdd`/`code-review`, direct-use `teach`/`handoff`); caveman pack `caveman`+`caveman-commit`; ponytail full. Pi target dropped from `SKILL_AGENTS` (installer no longer writes `~/.pi`; stale `ohmipy` refs purged from README/help/tests). Host converged: `~/.claude/skills` pruned 47→17 (single root; cut set recoverable from `~/.agents/skills`, untouched); `~/.pi/agent/skills` 39 symlink dupes removed. skill_bodies corrected in repo AND on host claude root: lean-ctx → semantic-only (ADR-0008), codebase-memory → enable litmus; agentmemory body skipped on OMP roots in `configure_agent_mcps.install_skills` (ADR-0006). `caveman-commit` lands via next installer run (already OMP-visible through the plugin marketplace). Cut-until-first-miss recovery: copy from `~/.agents/skills` or `skills add`. Stale manifest `"ask"` entry confirmed gone with the rewrite.
+
+**User decisions still open:** merge/push branch. Q8 resolved as *scope* (08-05, conservative — Claude Code behavior untouched); switch to *delete* only if Claude Code replace-mode is retired.
 
 **Phase 2 (agentic-env, parked):** smoke contract still *requires* agentmemory on OMP — now contradicts ADR-0006/0007; per-tool gating support; Hermes CI gate; stack-doctor hook-conflict checks (Q3 decision, unimplemented; Claude Code has 4× cbm-session-reminder + 2 read-interception policies).
 
@@ -160,7 +159,7 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 
 **Paired harness benchmark (if OMP-primary ever needs to be definitive):** arms OMP/Hermes, same repo snapshot + model (gpt-5.6-sol only overlap); tasks from the 934 recorded sessions; ladder replay→10-smoke→k=3→full (never trust k=1 — JetBrains' smokes lied both directions); endpoints pre-registered: paired billed cost, verify pass, edit-fail; sign test + Wilcoxon on medians; adoption audited per trial. Cost anchor: $106–320/tool (JetBrains), ~5,500 runs (PointFive).
 
-**Unmeasured, dormant:** schema cost/turn (item 8); harness-minus-tools baseline (9); version pinning (11); graph staleness policy (13); opencode trial; 458 MB Mnemopi benchmark-residue banks sweep.
+**Unmeasured, dormant:** schema cost/turn (item 8); harness-minus-tools baseline (9); version pinning (11); opencode trial; 458 MB Mnemopi benchmark-residue banks sweep. Graph staleness (13) resolved 08-05: enable-time `fast` reindex; no between-use policy needed.
 
 <details>
 <summary><strong>Primary sources</strong></summary>
