@@ -94,17 +94,17 @@ By model, pass rate: claude-fable-5 **98.6** · claude-opus-5 **98.1** · gpt-5.
 
 No selection algorithm. Startup scan → every discovered skill's `name`+`description` injected into system prompt → model self-picks by description → content lazy-loads via `skill://<name>`; `/skill:<name>` = manual force-inject. Dedup by name, first-wins across provider priority (`omp://skills.md`):
 
-| Pri | Provider | This host | Skills |
+| Pri | Provider | This host (08-07) | Skills |
 |---:|---|---|---:|
-| 100 | native `.omp`/`.pi` | `~/.pi/agent/skills` (agentic-env-installed) | 40 |
+| 100 | native `.omp`/`.pi` | empty (pruned 08-05) | 0 |
 | 90 | omp-plugins | — | — |
-| 80 | claude | `~/.claude/skills` | 48 |
-| 70 | claude-plugins · agents · codex | — | — |
+| 80 | claude | `~/.claude/skills` (curated root) | 24 |
+| 70 | claude-plugins · **agents** · codex | marketplace (caveman×5, karpathy, ponytail×6) · `~/.agents/skills` **disabled 08-07** | ~12 · ~~53~~ |
 | 55 | opencode | `~/.config/opencode/skills` | 1 |
 | 30 | github `.github/skills` | — | — |
 | 5 | omp-managed (autolearn) | `~/.omp/agent/managed-skills` | — |
 
-Same-name collision → higher pri wins (`ponytail` in both `.pi` and `.claude` → `.pi` copy served). Scan non-recursive: `<root>/skills/<name>/SKILL.md` only. Consequences: ~88 name+description entries ride **every** system prompt (item-8 cost, skill flavor); measured usage this corpus = 3 skills invoked per grilling session, `skill_view` heavy only on Hermes. Pruning levers exist, all unused: `skills.ignoredSkills` / `includeSkills` (globs), per-source toggles (`enableClaudeUser` etc.). Duplicate skill *sets* across `~/.claude` and `~/.pi` = same pack installed twice by different installers — dedup hides it, cost remains.
+Same-name collision → higher pri wins. Scan non-recursive: `<root>/skills/<name>/SKILL.md` only; symlinked dirs followed, deduped by realpath; `disable-model-invocation: true` (7 of the mattpocock 13: wayfinder, grill-with-docs, to-spec, to-tickets, implement, teach, handoff) excludes a skill from the prompt roster **by design** — still loads via `skill://`/`/skill:`. Roster is an instance-start snapshot. Pruning levers: `skills.ignoredSkills`/`includeSkills`, per-source toggles — `skills.enableAgentsUser: false` set 08-07 (see §Open).
 
 ## Evidence
 
@@ -145,7 +145,7 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 
 ## Open
 
-**Time-gated:** hook live-load check (next session, see State); read-out 2026-08-11; then re-grill Q-A number, Q-C constant.
+**Time-gated:** hook live-load check (next session, see State); read-out 2026-08-11; then re-grill Q-A number, Q-C constant. **Read-out caveat (08-07):** lean-ctx semantic-call count is contaminated — sessions hosted in the stale omp instance (started Aug 5 00:23, pre-gate) had the FULL ctx_* toolset; segment sessions by whether any disabled tool (`ctx_read/shell/glob/tree/call`) was called, count semantic calls only in gated sessions.
 
 **Implemented 2026-08-05:** lean-ctx → semantic-search-only on OMP (ADR-0008). Mechanism: OMP-native `~/.omp/agent/mcp.json` entry shadows the `~/.claude.json` registration; `LEAN_CTX_TOOL_PROFILE=minimal` + `LEAN_CTX_DISABLED_TOOLS=ctx_read,ctx_shell,ctx_glob,ctx_tree,ctx_call`; verified stdio `tools/list` → `["ctx_search"]` (OMP mcp.json has no per-tool filter — gate is server-side env). cbm → `disabledServers` on OMP (registered in `~/.claude.json`, hidden by denylist; `/mcp enable` lifts it per the litmus, run `fast` reindex at enable). Q8 block scoped to Claude Code in `~/.claude/CLAUDE.md` (marker `lean-ctx-claude-v6` — a lean-ctx updater rewrite would clobber the scoping; re-check after `lean-ctx update`). **cbm litmus:** enable for a session only when the question needs >10 native calls, crosses repo boundaries, or aggregates the whole graph; **promotion trigger:** litmus firing ~weekly in a project → default-on for that project scope, re-measure quality there. Q-F(a) Hermes: parked for future introspection (user, 08-05).
 
@@ -155,13 +155,18 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 
 **User decisions still open:** merge/push branch. Q8 resolved as *scope* (08-05, conservative — Claude Code behavior untouched); switch to *delete* only if Claude Code replace-mode is retired.
 
+**Grilled 2026-08-07 — item 8 (schema cost/turn) + wiring audit.** Three findings, all measured live:
+1. **MCP config applies at connect time, not per session.** OMP connects stdio MCP servers eagerly at instance start; a long-lived instance spans config edits. Proven: omp PID started Aug 5 00:23 (pre-gate) still served disabled `ctx_glob` and denylisted cbm `list_projects` on 08-07 (live probes). A fresh 08-07 instance honored the denylist (lean-ctx child, no cbm child) — wiring correct, staleness operational. **Rule: after any `mcp.json` edit, `/mcp reload` or restart every live omp instance.** Same staleness applies to the skill roster (instance-start snapshot).
+2. **Q-H roster cut never landed on OMP:** `~/.agents/skills` (the "recovery source", 53 dirs) is itself a scanned skill root (agents provider, pri 70) — all 31 cut skills kept riding the prompt, and the 08-07 installer run grew the store. Fixed by wiring: `skills.enableAgentsUser: false` (08-07; `enableAgentsProject` left on). Store is now recovery-only. Residual roster ≈ curated 24 (minus 7 hidden-by-design) + marketplace ~12 + opencode 1.
+3. **Item 8 measured:** initial prompt footprint (first-turn `cacheWrite+input`) ≈ 44–46K tokens/session (post-08-05 n=6: 40.5–46.4K). Same-project paired (paw-backend): median ~47.5K pre-curation → ~44.5K post = **−6%** — small because of finding 2. Prompt base × turns ≈ 40% of a 50-turn session's cache-read volume, so base cuts do move the 68.6% cache-read cost share; the −3K cut ≈ −2% of bill. Re-measure base after the store-root fix takes effect in fresh instances.
+
 **Phase 2 (agentic-env, parked):** smoke contract still *requires* agentmemory on OMP — now contradicts ADR-0006/0007; per-tool gating support; Hermes CI gate; stack-doctor hook-conflict checks (Q3 decision, unimplemented; Claude Code has 4× cbm-session-reminder + 2 read-interception policies).
 
 **Trigger-gated:** ADR-0006 flip — Mnemopi → Hindsight-vs-mem0 when recall returns sludge instead of decisions.
 
 **Paired harness benchmark (if OMP-primary ever needs to be definitive):** arms OMP/Hermes, same repo snapshot + model (gpt-5.6-sol only overlap); tasks from the 934 recorded sessions; ladder replay→10-smoke→k=3→full (never trust k=1 — JetBrains' smokes lied both directions); endpoints pre-registered: paired billed cost, verify pass, edit-fail; sign test + Wilcoxon on medians; adoption audited per trial. Cost anchor: $106–320/tool (JetBrains), ~5,500 runs (PointFive).
 
-**Unmeasured, dormant:** schema cost/turn (item 8); harness-minus-tools baseline (9); version pinning (11); opencode trial; 458 MB Mnemopi benchmark-residue banks sweep. Graph staleness (13) resolved 08-05: enable-time `fast` reindex; no between-use policy needed.
+**Unmeasured, dormant:** harness-minus-tools baseline (9); version pinning (11); opencode trial; 458 MB Mnemopi benchmark-residue banks sweep. Item 8 measured 08-07 (§above). Graph staleness (13) resolved 08-05: enable-time `fast` reindex; no between-use policy needed.
 
 <details>
 <summary><strong>Primary sources</strong></summary>
