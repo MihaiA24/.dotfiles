@@ -1,30 +1,19 @@
 # OMP Context Stack — Fast Read
 
-> Every claim re-graded against primary sources 2026-07-28; no vendor claim survived at face value. Binding decisions: `agentic-env/docs/adr/0006`, `0007`. Tuning applied 2026-07-28; **judgment 2026-08-11** (§Open). History: `git log` on this file — long-form analysis lives in prior revisions.
+> Every claim re-graded against primary sources 2026-07-28; no vendor claim survived at face value. Binding decisions: `agentic-env/docs/adr/0006`–`0008`. Tuning applied 2026-07-28; **judged 2026-08-11: bundle kept, lean-ctx dropped, memory flip trigger fired** (§State, §Open). History: `git log` on this file — long-form analysis and the read-out method live in prior revisions.
 
-## State as of 2026-07-28 (branch `feat/agent-stack-measured-cleanup`)
+## State as of 2026-08-11 (branch `feat/agent-stack-measured-cleanup`)
 
 | Where | Applied | Backup |
 |---|---|---|
 | OMP config | `compaction.thresholdTokens=150000` · `idleEnabled=true` · `strategy=handoff` · `handoffSaveToDisk=true` | `~/.omp/agent/config.yml.bak-tuning` |
 | OMP extensions | `omp/hooks/verification-recorder.ts` + `omp/hooks/cadence-governor.ts` (N=25, write-steer ≥1 KiB) | `omp config set extensions '[]'` |
-| OMP MCP | `disabledServers: [agentmemory, node_repl]` | `~/.omp/agent/mcp.json.bak` |
+| OMP MCP | `mcpServers: {}` · `disabledServers: [agentmemory, node_repl, codebase-memory-mcp, lean-ctx]` | `~/.omp/agent/mcp.json.bak-leanctx-drop` |
 | Hermes | 4 dead MCP servers `enabled:false` (agentmemory·mempalace·serena·codebase-memory-mcp); HERMES.md 3 lean-ctx blocks → 1 | `config.yaml.bak-tuning`, `HERMES.md.bak-tuning` |
 | Memory | `backend: mnemopi`, `polyphonicRecall: false` (ADR-0006) | `/memory clear` before backend switch |
 
-**Checked 2026-08-05:** hooks live. 281 events (test 183, lint 94, build 2, typecheck 2), command pass rate 94.3%. The "0 rows ⇒ experiment measures nothing" failure did not occur; read-out proceeds 2026-08-11.
-
-**Read-out procedure (2026-08-11):**
-
-```bash
-# pass rate + cadence source
-sqlite3 ~/.omp/agent/verification_evidence.db "select kind,status,count(*) from verification_events group by 1,2"
-sqlite3 ~/.omp/agent/verification_evidence.db "select round(100.0*sum(status='passed')/count(*),1)||'%' from verification_events"
-# end-green = last event per session_id passed
-# tokens/session + write:edit: parse ~/.omp/agent/sessions/*/*.jsonl —
-#   usage sums from toolResult-bearing messages; count toolCall name write vs edit
-#   (method: prior revision of this file, "Your workflow, measured")
-```
+**Checked 2026-08-05:** hooks live; the "0 rows ⇒ experiment measures nothing" failure did not occur.
+**Read-out executed 2026-08-11**, exactly on the pre-registered date (recorder db + top-level session jsonl, assistant-message usage sums; full method in prior revision).
 
 Pre-registered success (set before data existed — do not move goalposts):
 
@@ -38,15 +27,29 @@ Pre-registered success (set before data existed — do not move goalposts):
 
 Q-A/Q-B applied together → attribution is to the bundle, accepted.
 
+**Read-out 2026-08-11** — recorder: 374 events / 54 sessions (07-29→08-11); jsonl: 52 token-bearing sessions since 07-28:
+
+| Metric | Measured | Verdict |
+|---|---|---|
+| Tokens/session (median) | 6.0 M vs 11.9 M same-method baseline (incl-subagents: 8.8 M vs 15.4 M) = **−43…−50%** | **pass** (target −30%) |
+| Sessions ending green | **96.3%** (52/54, n ≥ 40) | **pass** |
+| Verification cadence | **20.9** calls/verify (7,826 / 374) | **pass** |
+| write:edit | as-registered **7.01** (fail) · file-writes-only **0.74** vs 0.51 clean baseline | **metric invalid** — note 2 |
+| Rollback | end-green 96.3% ≫ 88% | not triggered |
+
+Notes: (1) the 22.8 M baseline anchor does not reproduce under either method variant (11.9 M top-level / 15.4 M incl-subagents, same window) — grading used same-method deltas. (2) Both the 3.15 baseline and the <2.0 target counted xd:// virtual-device invocations as writes (memory/LSP/search devices ride the `write` tool); cleaned, the ratio is 0.51 → 0.74. Partial-miss policy (pre-registered 08-11 before data): bundle kept, miss recorded honestly, no re-tuning. (3) Per-command pass 89.0% at n=374 (was 94.3% at n=281) — not a criterion.
+
+**Bundle verdict: kept.** 3/4 pass, 4th definitionally invalid.
+
 ## Use this stack
 
 | Layer | Tool | Buys | Cost | Ev | Avoid |
 |---|---|---|---|---|---|
 | Host | **OMP core** | compaction, `read`, pruning, LSP/AST, lazy MCP | none | Host | disabling compaction |
-| Context I/O | OMP native + lean-ctx **semantic-search-only (ADR-0008)** | sole non-native capability kept | 1 schema (was 18); kill-threshold: <5 semantic calls at 08-11 read-out → drop entirely | C | any compressor on read→edit path: anchor corruption 27/40→15/40[P1]; Headroom **+48.4%**[P1] |
-| Memory | **Mnemopi** | per-project transcript recall, local SQLite | KG layer is noise — `polyphonicRecall` off | D (local meas. only) | second memory owner |
-| Memory upgrade path | Hindsight vs **mem0** | re-evaluate at flip trigger (ADR-0006) | service+DB / platform-only headline | B | adopting before recall visibly fails |
-| Code graph | codebase-memory-mcp | persistent graph, Cypher, cross-repo | **−9 pts quality** (83 vs 92) for 10× tokens; 0.3% of calls | B | **decided 08-05:** registered-but-disabled, warm index, `fast` reindex at enable; litmus in §Open |
+| Context I/O | **OMP native only** — `read`·`grep`·`glob`·`edit`·LSP + scout subagents | prompt-cache-stable, anchor-safe | lean-ctx **dropped 08-11**: 1 semantic call since 07-28 < 5 kill threshold (ADR-0008 fallback); re-shop only when grep+LSP+scouts visibly fail on a real task | — | any compressor on read→edit path: anchor corruption 27/40→15/40[P1]; Headroom **+48.4%**[P1] |
+| Memory | **Mnemopi** — flip trigger **FIRED 08-11** | per-project transcript recall, local SQLite | decision recall failed 4/4 probes (§Open); plain-text ADRs carried the truth | D (local meas. only) | second memory owner |
+| Memory upgrade path | Hindsight vs **mem0** | local bake-off **now due** (ADR-0006 flip fired) | service+DB / platform-only headline | B | adopting without pre-registered endpoints |
+| Code graph | codebase-memory-mcp | persistent graph, Cypher, cross-repo | **−9 pts quality** (83 vs 92) for 10× tokens; litmus fired **0×** since 08-05 (rechecked 08-11) | B | keep Gated; promotion trigger unchanged (litmus ~weekly → default-on per project) |
 | Terse output | Caveman | shorter output | measured **−8.5%**, not 65%[J1] | A | expecting vendor claim |
 | Less code | **Ponytail** | only measured *saving*: −10.3% cost[J3] | self-activates 0/10 — must force-inject | A | expecting −54% |
 
@@ -141,11 +144,11 @@ Axes: **Independence** (1P vendor / 3P unaffiliated) · **Baseline** (arm named 
 | Mnemopi | — | D | no published bench; local: transcript recall good, KG noise |
 | `local` / aider / Repomix | — | D | no measurement |
 
-Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources found via citations.
+Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources found via citations. **Re-checked 2026-08-10:** trendshift top-20 → 1/20 qualifies (Ponytail #17 — already tracked via J3, zero new information; new non-qualifiers incl. semantica, code-graph-rag: 1P microbenchmarks, no agent-on-repo arm). Same-day sweep of all tracked sources: no evidence-relevant change (P1 v3 08-02 = identical numbers; JetBrains new post not paired A/B; mem0/Hindsight/Headroom/lean-ctx benchmark docs unchanged; rtk v0.45 + ponytail v4.9 functional only). Retirement stands.
 
 ## Open
 
-**Time-gated:** read-out 2026-08-11 (compaction/cadence metrics vs pre-registered table, see State); then re-grill Q-A number, Q-C constant. **Measured 08-10:** hook live-load confirmed — `verification_events` 281 (08-05) → 308. **Semantic count measured 08-10:** `sem=0` across ALL 54 OMP sessions since 07-28, counted under maximum exposure (ungated stale-instance sessions + shadow-mode prompts pushing ctx_*) — the contamination caveat is moot; the kill threshold (<5) fires with margin. **lean-ctx drop executes 2026-08-11 (pre-registered):** remove `mcpServers.lean-ctx` from `~/.omp/agent/mcp.json` AND add `"lean-ctx"` to `disabledServers` — without the denylist entry the `~/.claude.json` import resurfaces the ungated 18-tool server once the native (shadowing) entry is gone. Verify in fresh instances: no lean-ctx child process, no `ctx_search` in tool inventory. Stale pre-gate instances (PIDs 59895, 65052) are gone; all live omp started 08-10.
+**Executed 2026-08-11 (both pre-registered gates):** read-out graded against the frozen table — bundle kept, 3/4 pass (§State) — and the lean-ctx kill threshold fired. Final semantic count **sem=1** since 07-28: one `ctx_search(action=semantic)` call (mimir, 08-10T18:32Z), landed after the 08-10 `sem=0` sweep of all 54 sessions; still < 5 with margin. Drop executed as pre-registered: `mcpServers.lean-ctx` removed from `~/.omp/agent/mcp.json` AND `"lean-ctx"` added to `disabledServers` (backup `mcp.json.bak-leanctx-drop`); `~/.claude.json` still registers lean-ctx + cbm and the denylist covers both, so the import cannot resurface them. Live omp instances started 08-10 (pre-edit) still hold lean-ctx children per the connect-time staleness rule — restart them; a fresh instance must show no lean-ctx child and no `ctx_search` in inventory. Hook live-load confirmed 08-10: `verification_events` 281 → 308. Remaining time-gated: round-3 re-grill of the Q-A number and Q-C constant against the read-out data.
 
 **Implemented 2026-08-05:** lean-ctx → semantic-search-only on OMP (ADR-0008). Mechanism: OMP-native `~/.omp/agent/mcp.json` entry shadows the `~/.claude.json` registration; `LEAN_CTX_TOOL_PROFILE=minimal` + `LEAN_CTX_DISABLED_TOOLS=ctx_read,ctx_shell,ctx_glob,ctx_tree,ctx_call`; verified stdio `tools/list` → `["ctx_search"]` (OMP mcp.json has no per-tool filter — gate is server-side env). cbm → `disabledServers` on OMP (registered in `~/.claude.json`, hidden by denylist; `/mcp enable` lifts it per the litmus, run `fast` reindex at enable). Q8 block scoped to Claude Code in `~/.claude/CLAUDE.md` (marker `lean-ctx-claude-v6` — a lean-ctx updater rewrite would clobber the scoping; re-check after `lean-ctx update`). **cbm litmus:** enable for a session only when the question needs >10 native calls, crosses repo boundaries, or aggregates the whole graph; **promotion trigger:** litmus firing ~weekly in a project → default-on for that project scope, re-measure quality there. Q-F(a) Hermes: parked for future introspection (user, 08-05).
 
@@ -160,9 +163,9 @@ Discovery via trending lists retired: 1/20 then 0/20 qualified; both 3P sources 
 2. **Q-H roster cut never landed on OMP:** `~/.agents/skills` (the "recovery source", 53 dirs) is itself a scanned skill root (agents provider, pri 70) — all 31 cut skills kept riding the prompt, and the 08-07 installer run grew the store. Fixed by wiring: `skills.enableAgentsUser: false` (08-07; `enableAgentsProject` left on). Store is now recovery-only. **Verified in situ 08-10:** fresh-session roster = 21 visible skills (9 curated + 12 marketplace), zero agents-store entries.
 3. **Item 8 measured:** initial prompt footprint (first-turn `cacheWrite+input`) ≈ 44–46K tokens/session (post-08-05 n=6: 40.5–46.4K). Same-project paired (paw-backend): median ~47.5K pre-curation → ~44.5K post = **−6%** — small because of finding 2. Prompt base × turns ≈ 40% of a 50-turn session's cache-read volume, so base cuts do move the 68.6% cache-read cost share; the −3K cut ≈ −2% of bill. **Re-measured 08-10 post store-root fix** (fresh sessions 08-08+, n=5): base 39.6–42K, median ~40.4K = additional **−9%**; one 44.3K outlier predates the 08-10 instance restarts (stale roster snapshot).
 
-**Phase 2 (agentic-env, parked):** smoke contract still *requires* agentmemory on OMP — now contradicts ADR-0006/0007; per-tool gating support; Hermes CI gate; stack-doctor hook-conflict checks (Q3 decision, unimplemented; Claude Code has 4× cbm-session-reminder + 2 read-interception policies).
+**Phase 2 (agentic-env) closed 2026-08-11:** the smoke-contract contradiction is fixed — `configure_agent_mcps` writes only `codebase-memory-mcp` to OMP-family MCP config, skipping `agentmemory` (ADR-0006) and `lean-ctx` (ADR-0008 fallback) with matching skill-root exclusions; the PI agentmemory extension wiring is deleted (`_configure_pi_agentmemory`, pinned `index.ts` remote + sha, `settings.json` check); docker smoke asserts cbm present AND agentmemory/lean-ctx absent on OMP. Verified: 39 unit tests + 3 `--verify-remote-contract` checks green (docker run itself not re-executed). Still parked: per-tool gating support (moot on OMP after the drop; secondary agents keep full wiring until Q-F(a)), Hermes CI gate, stack-doctor hook-conflict checks (Q3 decision, unimplemented; Claude Code has 4× cbm-session-reminder + 2 read-interception policies).
 
-**Trigger-gated:** ADR-0006 flip — Mnemopi → Hindsight-vs-mem0 when recall returns sludge instead of decisions.
+**ADR-0006 flip trigger FIRED 2026-08-11:** decision recall failed 4/4 probes; plain-text ADRs carried the truth (§State). Next: local Hindsight-vs-mem0 bake-off, endpoints pre-registered before any adoption — same trigger discipline as ADR-0006.
 
 **Paired harness benchmark (if OMP-primary ever needs to be definitive):** arms OMP/Hermes, same repo snapshot + model (gpt-5.6-sol only overlap); tasks from the 934 recorded sessions; ladder replay→10-smoke→k=3→full (never trust k=1 — JetBrains' smokes lied both directions); endpoints pre-registered: paired billed cost, verify pass, edit-fail; sign test + Wilcoxon on medians; adoption audited per trial. Cost anchor: $106–320/tool (JetBrains), ~5,500 runs (PointFive).
 
