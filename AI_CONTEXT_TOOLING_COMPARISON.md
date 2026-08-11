@@ -1,6 +1,6 @@
 # OMP Context Stack — Fast Read
 
-> **DEPRECATED 2026-08-11 — frozen.** Operative findings distilled to [`AGENTS.md`](AGENTS.md) (auto-loaded agent context). This file remains as evidence history only; no further updates.
+> **DEPRECATED 2026-08-11 — frozen.** Operative findings distilled to [`DECISIONS_AI_TOOLING.md`](DECISIONS_AI_TOOLING.md). This file remains as evidence history only; no further updates.
 
 > Every claim re-graded against primary sources 2026-07-28; no vendor claim survived at face value. Binding decisions: `agentic-env/docs/adr/0006`–`0008`. Tuning applied 2026-07-28; **judged 2026-08-11: bundle kept, lean-ctx dropped, memory flip trigger fired** (§State, §Open); **same-day full-market sweep: 17 tools, 0 adoptions** (§Evidence, Round 2). History: `git log` on this file — long-form analysis and the read-out method live in prior revisions.
 
