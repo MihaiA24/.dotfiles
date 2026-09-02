@@ -1,6 +1,5 @@
 .idea
 __pycache__/
 *.pyc
-.lean-ctx/
 fish/fish_variables*
 !fish/fish_variables

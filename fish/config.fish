@@ -40,16 +40,3 @@ end
 
 # uv
 fish_add_path "/home/mihai/.local/bin"
-
-
-# lean-ctx shell hook — begin
-if test -f "/home/mihai/.lean-ctx/shell-hook.fish"
-source "/home/mihai/.lean-ctx/shell-hook.fish"
-end
-# lean-ctx shell hook — end
-
-# >>> lean-ctx proxy env >>>
-# ANTHROPIC_BASE_URL omitted: Claude Pro/Max subscription authenticates against api.anthropic.com directly (set ANTHROPIC_API_KEY to route Claude through the proxy)
-set -gx OPENAI_BASE_URL "http://127.0.0.1:4444/v1"
-set -gx GEMINI_API_BASE_URL "http://127.0.0.1:4444"
-# <<< lean-ctx proxy env <<<

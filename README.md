@@ -37,7 +37,6 @@ Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./se
 | Claude Code CLI | `curl -fsSL https://claude.ai/install.sh \| bash` |
 | Hermes Agent | `curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh \| bash` |
 | Understand-Anything for Hermes | `curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh \| bash -s hermes` |
-| LeanCTX | `curl -fsSL https://leanctx.com/install.sh \| sh` |
 | Oh My Pi / Pi Coding Agent | `curl -fsSL https://omp.sh/install \| sh` |
 
 ### Other tools

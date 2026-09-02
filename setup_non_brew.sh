@@ -28,12 +28,6 @@ install_understand_anything_hermes() {
   run_cmd "curl -fsSL https://raw.githubusercontent.com/Lum1104/Understand-Anything/main/install.sh | bash -s hermes"
 }
 
-# LeanCTX context layer
-# https://github.com/yvgude/lean-ctx
-install_lean_ctx() {
-  run_cmd "curl -fsSL https://leanctx.com/install.sh | sh"
-}
-
 # Oh My Pi / Pi Coding Agent
 # https://github.com/can1357/oh-my-pi
 install_oh_my_pi() {
