@@ -74,7 +74,4 @@ run_cmd "paru -S superfile" # Fancy terminal file manager
 run_cmd "paru -S todoist-rs"
 run_cmd "paru -S gnome-shell-extension-installer" # Use: gnome-shell-extension-installer <extension-id>
 
-# Install rust packages cli
-run_cmd "cargo install lean-ctx"
-
 echo "setup_linux_cachyos complete"
