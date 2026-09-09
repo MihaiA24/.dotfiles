@@ -63,8 +63,7 @@ nullish: null
         self.assertIsNone(parsed["nullish"])
 
         dumped = configure_agent_mcps._dump_yaml_config(parsed)
-        self.assertIn("agentmemory:", dumped)
-        self.assertIn('args: ["-y", "@agentmemory/mcp"]', dumped)
+        self.assertEqual(configure_agent_mcps._parse_yaml_config(dumped), parsed)
 
     def test_configure_hermes_is_idempotent_when_already_compliant(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -148,7 +147,7 @@ mcp_servers:
     - --endpoint=https://example.test:443
     - 'Authorization: user-owned'
     - 'it''s quoted'
-    - "line\\nfeed"
+    - "line\\nfeed # literal"  # trailing comment
     transport: stdio
 discord:
   allowed_channels:
@@ -156,9 +155,13 @@ discord:
 display:
   hidden_tools:
     - terminal
-  memory_notifications: 'off'
+  memory_notifications: 'off'  # string, not a boolean
 auxiliary:
   extra_body: {}
+database:
+  journal_mode: "wal"  # Supported values: "wal", "delete"
+  timeout: 60  # seconds
+gateway:
 known_plugin_toolsets:
 - custom-plugin
 """,
@@ -189,7 +192,7 @@ known_plugin_toolsets:
                         "--endpoint=https://example.test:443",
                         "Authorization: user-owned",
                         "it's quoted",
-                        "line\nfeed",
+                        "line\nfeed # literal",
                     ],
                     "transport": "stdio",
                 },
@@ -205,6 +208,8 @@ known_plugin_toolsets:
             self.assertEqual(parsed["known_plugin_toolsets"], ["custom-plugin"])
             self.assertEqual(parsed["display"]["memory_notifications"], "off")
             self.assertEqual(parsed["auxiliary"]["extra_body"], {})
+            self.assertEqual(parsed["database"], {"journal_mode": "wal", "timeout": 60})
+            self.assertIsNone(parsed["gateway"])
 
     def test_configure_hermes_rejects_malformed_yaml_without_writing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

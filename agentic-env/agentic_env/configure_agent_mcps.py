@@ -182,38 +182,29 @@ def _select_many(
 
 def _parse_yaml_scalar(raw: str, line_no: int) -> object:
     text = raw.strip()
-    if not text:
+    if not text or text.startswith("#"):
         raise ValueError(f"line {line_no}: malformed YAML scalar")
 
-    if text.startswith("#"):
-        raise ValueError(f"line {line_no}: inline comment without value")
-
-    if text.startswith('"'):
+    if text.startswith(('"', "[", "{")):
         try:
-            return json.loads(text)
+            value, end = json.JSONDecoder().raw_decode(text)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"line {line_no}: unsupported quoted scalar: {exc}") from None
-    if text.startswith("'"):
-        if not re.fullmatch(r"'(?:[^']|'')*'", text):
-            raise ValueError(f"line {line_no}: malformed quoted scalar")
-        return text[1:-1].replace("''", "'")
-
-    if text.startswith("[") and text.endswith("]"):
-        try:
-            value = json.loads(text)
-        except json.JSONDecodeError:
-            # YAML flow lists allow unquoted scalars (`[hermes-cli]`); parse
-            # each comma-separated item as a scalar instead of failing.
+            if not (text.startswith("[") and text.endswith("]")):
+                raise ValueError(f"line {line_no}: unsupported YAML scalar: {exc}") from None
+            # YAML flow lists also allow unquoted scalars (`[hermes-cli]`).
             inner = text[1:-1].strip()
-            if not inner:
-                return []
-            return [
-                _parse_yaml_scalar(item, line_no) for item in inner.split(",")
-            ]
-        if not isinstance(value, list):
-            raise ValueError(f"line {line_no}: list value expected")
+            return [_parse_yaml_scalar(item, line_no) for item in inner.split(",")] if inner else []
+        if text[end:] and not re.fullmatch(r"\s+#.*", text[end:]):
+            raise ValueError(f"line {line_no}: unexpected content after YAML scalar")
         return value
 
+    if text.startswith("'"):
+        match = re.fullmatch(r"'((?:[^']|'')*)'(?:\s+#.*)?", text)
+        if not match:
+            raise ValueError(f"line {line_no}: malformed quoted scalar")
+        return match[1].replace("''", "'")
+
+    text = re.split(r"\s+#", text, maxsplit=1)[0].rstrip()
     if text in {"true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"}:
         return True
     if text in {"false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF"}:
@@ -229,13 +220,6 @@ def _parse_yaml_scalar(raw: str, line_no: int) -> object:
         return float(text)
     except ValueError:
         pass
-
-    if text.startswith("{") and text.endswith("}"):
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"line {line_no}: invalid JSON value: {exc}") from None
-
     return text
 
 
@@ -332,7 +316,7 @@ def _parse_yaml_config(path: str) -> dict[str, object]:
                 if next_indent > current_indent:
                     result[key], index = parse_mapping(index, next_indent)
                     continue
-            result[key] = {}
+            result[key] = None
         return result, index
 
     if not lines:
