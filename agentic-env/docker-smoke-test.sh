@@ -5,37 +5,26 @@ SKIP_INSTALL=${SKIP_INSTALL:-0}
 _SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
 . "$_SCRIPT_DIR/setup_helpers.sh"
 
-_node_script="$(mktemp -t dotfiles-smoke-check.XXXXXX.js)"
+_python_script="$(mktemp -t dotfiles-smoke-check.XXXXXX.py)"
 cleanup() {
   cleanup_run_log
-  rm -f "$_node_script"
+  rm -f "$_python_script"
 }
 trap cleanup EXIT
 
 # Hermes-side wiring is secondary (doctor only warns); the smoke still pins it.
-cat >"$_node_script" <<'JS'
-const fs = require('fs');
-const path = require('path');
-const home = process.env.HOME;
+cat >"$_python_script" <<'PY'
+from pathlib import Path
+import yaml
 
-if (!home) {
-  throw new Error('HOME is not set');
-}
-
-const hermes = path.join(home, '.hermes', 'config.yaml');
-if (!fs.existsSync(hermes)) {
-  throw new Error('missing ~/.hermes/config.yaml');
-}
-const text = fs.readFileSync(hermes, 'utf8');
-for (const name of ['codebase-memory-mcp', 'agentmemory']) {
-  if (!text.includes(`${name}:`)) {
-    throw new Error(`~/.hermes/config.yaml missing ${name} MCP entry`);
-  }
-}
-if (!/^\s*provider:\s*agentmemory\s*$/m.test(text)) {
-  throw new Error('~/.hermes/config.yaml missing memory.provider=agentmemory');
-}
-JS
+config = yaml.safe_load((Path.home() / ".hermes" / "config.yaml").read_text())
+servers = config.get("mcp_servers", {})
+for name in ("codebase-memory-mcp", "agentmemory"):
+    assert name in servers, f"~/.hermes/config.yaml missing {name} MCP entry"
+assert config.get("memory", {}).get("provider") == "agentmemory", (
+    "~/.hermes/config.yaml missing memory.provider=agentmemory"
+)
+PY
 
 if [ "$SKIP_INSTALL" != "1" ]; then
   echo "[1/7] Installing agentic-env CLI"
@@ -98,7 +87,7 @@ require_command agentmemory
 
 echo "[7/7] Verifying stack wiring (agentic-stack-doctor) and Hermes config artifacts"
 run_cmd "agentic-stack-doctor"
-run_cmd "node $_node_script"
+run_cmd "uv run --with pyyaml python $_python_script"
 
 if [ "$failures" -ne 0 ]; then
   echo "Failed checks: $failures"
