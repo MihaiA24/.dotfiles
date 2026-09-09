@@ -683,6 +683,7 @@ OMP_AGENT_CONFIG_CONTRACT = (
     ("compaction", "idleEnabled: true"),
     ("compaction", "handoffSaveToDisk: true"),
     ("compaction", "methodOrder:"),
+    ("skills", "enableClaudeUser: true"),
     ("skills", "enableAgentsUser: false"),
     *(("extensions", name) for name in _OMP_HOOK_FILES),
 )
@@ -700,6 +701,7 @@ mnemopi:
     - remote
     - soft
 skills:
+  enableClaudeUser: true
   enableAgentsUser: false
 """
 

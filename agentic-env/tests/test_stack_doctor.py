@@ -158,6 +158,25 @@ class StackDoctorTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("compaction.methodOrder:", output)
 
+    def test_claude_skill_root_must_be_enabled_without_rewriting_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            host = _Host(Path(temp_dir))
+            original = host.agent_config.read_text(encoding="utf-8").replace(
+                "  enableClaudeUser: true\n", ""
+            )
+            host.agent_config.write_text(original, encoding="utf-8")
+            code, output = _run(host)
+            self.assertEqual(code, 1)
+            self.assertIn("skills.enableClaudeUser", output)
+            self.assertEqual(host.agent_config.read_text(encoding="utf-8"), original)
+
+            host.agent_config.write_text(
+                original.replace("skills:\n", "skills:\n  enableClaudeUser: true\n"),
+                encoding="utf-8",
+            )
+            code, _ = _run(host)
+            self.assertEqual(code, 0)
+
     def test_hermes_lean_ctx_entry_only_warns(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             host = _Host(Path(temp_dir))
