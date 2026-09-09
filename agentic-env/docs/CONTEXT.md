@@ -93,13 +93,13 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - The small reviewed set of skills installed by default for the supported agent workflow, selected per pack in the skill-pack manifest and installed once into the skill store, which every supported and installed agent reads; custom skill-pack configuration is the extension point for user-specific packs. Prompt exposure follows installation — there is no separate allowlist layer.
   - _Avoid_: Comprehensive skill catalog, skill marketplace
 
-- **uv runnable script**
-  - A single-file Python script with inline `uv` metadata that is executed from the checkout with `uv run --script` or `uv run ./script.py`.
-  - _Avoid_: uv tool command, installed CLI
+- **Checkout module command**
+  - A development or verification command run directly from the provisioner's checkout, without installing its command set into the user's environment.
+  - _Avoid_: Root script wrapper, uv tool command, installed CLI
 
 - **uv tool command**
   - A named CLI entry point installed by `uv tool install` and run from the user's PATH.
-  - _Avoid_: uv runnable script
+  - _Avoid_: Checkout module command
 
 - **Fresh install**
   - A complete, non-interactive installation in a clean supported-host environment using:
