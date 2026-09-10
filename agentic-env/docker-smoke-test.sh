@@ -17,13 +17,32 @@ cat >"$_python_script" <<'PY'
 from pathlib import Path
 import yaml
 
-config = yaml.safe_load((Path.home() / ".hermes" / "config.yaml").read_text())
-servers = config.get("mcp_servers", {})
-for name in ("codebase-memory-mcp", "agentmemory"):
-    assert name in servers, f"~/.hermes/config.yaml missing {name} MCP entry"
-assert config.get("memory", {}).get("provider") == "agentmemory", (
-    "~/.hermes/config.yaml missing memory.provider=agentmemory"
-)
+from agentic_env.configure_agent_mcps import MCP_SERVERS, _HermesConfigAdapter
+
+config_path = Path.home() / ".hermes" / "config.yaml"
+config = yaml.safe_load(config_path.read_text())
+assert isinstance(config, dict), "~/.hermes/config.yaml root must be a mapping"
+servers = config.get("mcp_servers")
+assert isinstance(servers, dict), "~/.hermes/config.yaml mcp_servers must be a mapping"
+
+required_servers = [
+    MCP_SERVERS[name] for name in ("codebase-memory-mcp", "agentmemory")
+]
+assert _HermesConfigAdapter(config_path).validate(
+    config, required_servers, required_provider="agentmemory"
+), "~/.hermes/config.yaml has invalid Hermes MCP wiring"
+
+for server in required_servers:
+    entry = servers.get(server.name)
+    assert isinstance(entry, dict), (
+        f"~/.hermes/config.yaml {server.name} MCP entry must be a mapping"
+    )
+    assert entry.get("command") == server.command, (
+        f"~/.hermes/config.yaml {server.name} MCP command is incorrect"
+    )
+    assert entry.get("args", []) == list(server.args), (
+        f"~/.hermes/config.yaml {server.name} MCP args are incorrect"
+    )
 PY
 
 if [ "$SKIP_INSTALL" != "1" ]; then
