@@ -292,9 +292,9 @@ For Arch, use `docker compose --profile arch run --build -d --name agentic-env-a
 
 ### Current smoke contract
 The run is successful only if all checks pass:
-1. `uv tool install --force --python python3 .` succeeds.
+1. `uv tool install --force .` succeeds using the absolute prerequisite Python path captured before bootstrap.
 2. `agentic-bootstrap` succeeds (its final phase is `agentic-stack-doctor`).
-3. All six package module entry points load and expose help through `uv run --frozen --python python3 python -m agentic_env.<module> --help`.
+3. All six package module entry points load and expose help through `uv run --frozen ... python -m agentic_env.<module> --help`, using that same interpreter rather than Hermes' managed Python 3.11.
 4. Binary checks pass for:
    - `agentic-*` entry points incl. `agentic-stack-doctor`
    - `hermes`, `omp`, `codex`, `claude`, `codebase-memory-mcp`, `agentmemory`

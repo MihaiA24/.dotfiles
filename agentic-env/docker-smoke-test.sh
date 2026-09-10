@@ -16,7 +16,9 @@ printf 'Run: %s\nRevision: %s\nHOME: %s\n' \
 for prerequisite in uv python3 node npm npx curl git bash tar gzip xz unzip ps make cc c++; do
   command -v "$prerequisite" || { echo "Missing prerequisite: $prerequisite" >&2; exit 1; }
 done
-python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"; print(sys.version)'
+# Keep the prerequisite interpreter: Hermes installs a managed Python 3.11 that uv prefers.
+_python="$(command -v python3)"
+"$_python" -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"; print(sys.version)'
 node -e 'if (Number(process.versions.node.split(".")[0]) < 20) throw new Error("Node.js 20+ required"); console.log(process.version)'
 uv --version
 npm --version
@@ -76,7 +78,7 @@ PY
 
 if [ "$SKIP_INSTALL" != "1" ]; then
   echo "[2/5] Installing agentic-env CLI"
-  run_cmd "uv tool install --force --python python3 ."
+  run_cmd "uv tool install --force --python \"$_python\" ."
 fi
 
 if [ "$SKIP_INSTALL" != "1" ]; then
@@ -85,12 +87,12 @@ if [ "$SKIP_INSTALL" != "1" ]; then
 fi
 
 echo "[4/5] Verifying package module entry points and installed binaries"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.bootstrap --help"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.install_agents --help"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.install_skills_mcps --help"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.configure_agent_mcps --help"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.update_agentic_stack --help"
-run_cmd "uv run --frozen --python python3 python -m agentic_env.stack_doctor --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.bootstrap --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.install_agents --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.install_skills_mcps --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.configure_agent_mcps --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.update_agentic_stack --help"
+run_cmd "uv run --frozen --python \"$_python\" python -m agentic_env.stack_doctor --help"
 
 failures=0
 
@@ -132,7 +134,7 @@ done
 
 echo "[5/5] Verifying stack wiring (agentic-stack-doctor) and Hermes artifacts"
 run_cmd "agentic-stack-doctor"
-run_cmd "uv run --frozen --python python3 --with pyyaml python \"$_python_script\""
+run_cmd "uv run --frozen --python \"$_python\" --with pyyaml python \"$_python_script\""
 
 if [ "$failures" -ne 0 ]; then
   echo "Failed checks: $failures"
