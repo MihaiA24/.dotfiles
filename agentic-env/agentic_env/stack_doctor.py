@@ -87,19 +87,23 @@ def _check_omp_mcp(path: Path) -> list[Check]:
         return [Check(f"{label} present", False, "missing", FIX_CONFIGURE)]
     loaded = _mcp_servers(path)
     if loaded is None:
-        return [Check(f"{label} present", False, "unreadable JSON", FIX_CONFIGURE)]
+        return [Check(f"{label} present", False, "unreadable JSON", f"fix {label} by hand")]
     servers, disabled = loaded
-    checks = [
-        Check(
-            f"{label}: {name} wired + gated",
-            name in servers and name in disabled,
-            "mcpServers + disabledServers" if name in servers and name in disabled
-            else "missing from mcpServers" if name not in servers
-            else "not in disabledServers",
-            FIX_CONFIGURE,
+    checks = []
+    for name in cfg.OMP_GATED_SERVERS:
+        entry = f"mcpServers.{name}"
+        drift = cfg._mcp_entry_drift(servers[name], cfg.MCP_SERVERS[name]) if name in servers else ""
+        checks.append(
+            Check(
+                f"{label}: {name} wired + gated",
+                name in servers and not drift and name in disabled,
+                f"{entry}: {drift}" if drift
+                else "missing from mcpServers" if name not in servers
+                else "not in disabledServers" if name not in disabled
+                else "mcpServers + disabledServers",
+                f"fix {entry} in {label} by hand" if drift else FIX_CONFIGURE,
+            )
         )
-        for name in cfg.OMP_GATED_SERVERS
-    ]
     for name in cfg.OMP_GATED_BUILTINS:
         checks.append(
             Check(
@@ -118,13 +122,22 @@ def _check_omp_mcp(path: Path) -> list[Check]:
             FIX_CONFIGURE,
         )
     )
+    ungated = [name for name in cfg.OMP_EXCLUDED_SERVERS if name not in disabled]
+    checks.append(
+        Check(
+            f"{label}: excluded servers disabled",
+            not ungated,
+            ", ".join(ungated) if ungated else "disabledServers",
+            FIX_CONFIGURE,
+        )
+    )
     hits = _interception_prose(servers)
     checks.append(
         Check(
             f"{label}: no read-interception prose",
             not hits,
             ", ".join(hits) if hits else "clean",
-            FIX_CONFIGURE,
+            f"remove read-interception instructions from {label} by hand",
         )
     )
     return checks
@@ -226,18 +239,43 @@ def _check_hermes() -> list[Check]:
     path = cfg.HERMES_CONFIG_PATH
     if not path.exists():
         return [Check("~/.hermes/config.yaml present", False, "missing", FIX_CONFIGURE, mandatory=False)]
-    entries = cfg.omp_config_block(path.read_text(encoding="utf-8"), "mcp_servers")
-    absent = [name for name in cfg.MCP_SERVERS if f"{name}:" not in entries]
-    checks = [
-        Check(
-            "hermes mcp_servers wired",
-            not absent,
-            ", ".join(absent) if absent else ", ".join(cfg.MCP_SERVERS),
-            FIX_CONFIGURE,
+    label = _short(path)
+    data = cfg._HermesConfigAdapter(path)._read()
+    if data is None:
+        return [Check(f"{label} parsed", False, "unreadable YAML", f"fix {label} by hand", mandatory=False)]
+    entries = data.get("mcp_servers")
+    checks = []
+    if entries is not None and not isinstance(entries, dict):
+        checks.append(Check(
+            "hermes mcp_servers", False, "must be an object",
+            f"fix mcp_servers in {label} by hand", mandatory=False,
+        ))
+    else:
+        for server in cfg.MCP_SERVERS.values():
+            entry = f"mcp_servers.{server.name}"
+            present = isinstance(entries, dict) and server.name in entries
+            drift = cfg._mcp_entry_drift(entries[server.name], server) if present else "missing"
+            checks.append(Check(
+                f"hermes {entry}", not drift, drift or "configured",
+                f"fix {entry} in {label} by hand" if present and drift else FIX_CONFIGURE,
+                mandatory=False,
+            ))
+
+    memory = data.get("memory")
+    for server in cfg.MCP_SERVERS.values():
+        if not server.hermes_memory_provider:
+            continue
+        provider = memory.get("provider") if isinstance(memory, dict) else None
+        missing = memory is None or isinstance(memory, dict) and provider is None
+        checks.append(Check(
+            "hermes memory.provider",
+            isinstance(memory, dict) and provider == server.hermes_memory_provider,
+            f"{provider!r}; expected {server.hermes_memory_provider!r}" if missing or isinstance(memory, dict)
+            else "memory must be an object",
+            FIX_CONFIGURE if missing else f"fix memory.provider in {label} by hand",
             mandatory=False,
-        )
-    ]
-    stale = "lean-ctx:" in entries
+        ))
+    stale = isinstance(entries, dict) and "lean-ctx" in entries
     checks.append(
         Check(
             "hermes mcp_servers: no lean-ctx",

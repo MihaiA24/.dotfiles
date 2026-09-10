@@ -15,7 +15,7 @@ on:
 
 jobs:
   agentic-smoke-test:
-    name: Fresh install smoke test
+    name: Debian bookworm x86_64 clean install
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -24,9 +24,84 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Verify docker compose available
         run: docker compose version
 
-      - name: Run fresh-install smoke test
-        run: docker compose up --build --exit-code-from fresh-install
+      - name: Run fresh-install and checks-only smoke tests
+        run: |
+          docker compose run --build -d --name agentic-env-debian fresh-install sleep infinity
+          trap 'docker rm -f agentic-env-debian' EXIT
+          docker exec agentic-env-debian /bin/sh ./clean-acceptance.sh
+          docker exec -e SKIP_INSTALL=1 agentic-env-debian /bin/sh ./clean-acceptance.sh
+
+  agentic-smoke-test-macos:
+    name: Native macOS 15 Apple Silicon arm64 clean install
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: agentic-env
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Require native Apple Silicon
+        run: |
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
+          sw_vers
+          xcode-select -p
+
+      - name: Prepare Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Node.js 20 and npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare uv without a restored cache
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Prepare archive utilities and CA certificates
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install xz ca-certificates
+
+      - name: Run native fresh-install and checks-only smoke tests
+        run: |
+          export AGENTIC_PREREQ_PATH="$(dirname "$(command -v uv)"):$(dirname "$(command -v python3)"):$(dirname "$(command -v node)"):$(brew --prefix xz)/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+          export AGENTIC_SMOKE_HOME="$RUNNER_TEMP/agentic-env-acceptance"
+          sh ./clean-acceptance.sh
+          SKIP_INSTALL=1 sh ./clean-acceptance.sh
+
+  agentic-smoke-test-arch:
+    name: Arch Linux x86_64 clean install (not CachyOS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: agentic-env
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify docker compose available
+        run: docker compose version
+
+      - name: Run Arch fresh-install and checks-only smoke tests
+        run: |
+          docker compose --profile arch run --build -d --name agentic-env-arch fresh-install-arch sleep infinity
+          trap 'docker rm -f agentic-env-arch' EXIT
+          docker exec agentic-env-arch /bin/sh ./clean-acceptance.sh
+          docker exec -e SKIP_INSTALL=1 agentic-env-arch /bin/sh ./clean-acceptance.sh

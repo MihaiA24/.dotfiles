@@ -1,0 +1,15 @@
+FROM archlinux:base
+
+RUN pacman-key --init \
+    && pacman-key --populate archlinux \
+    && pacman -Syu --noconfirm --needed \
+      ca-certificates curl git uv python nodejs npm \
+      bash coreutils findutils grep sed gawk procps-ng tar gzip xz unzip \
+      base-devel libffi \
+    && pacman -Scc --noconfirm \
+    && useradd --create-home --shell /bin/bash node
+
+USER node
+ENV HOME=/home/node
+WORKDIR /dotfiles/agentic-env
+CMD ["/bin/sh"]

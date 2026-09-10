@@ -181,8 +181,8 @@ def _select_many(
 
 
 def _parse_yaml_scalar(raw: str, line_no: int) -> object:
-    text = raw.strip()
-    if not text or text.startswith("#"):
+    text = _yaml_without_comment(raw).strip()
+    if not text:
         raise ValueError(f"line {line_no}: malformed YAML scalar")
 
     if text.startswith(('"', "[", "{")):
@@ -204,7 +204,6 @@ def _parse_yaml_scalar(raw: str, line_no: int) -> object:
             raise ValueError(f"line {line_no}: malformed quoted scalar")
         return match[1].replace("''", "'")
 
-    text = re.split(r"\s+#", text, maxsplit=1)[0].rstrip()
     if text in {"true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"}:
         return True
     if text in {"false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF"}:
@@ -250,15 +249,13 @@ def _parse_yaml_config(path: str) -> dict[str, object]:
             if text != "-" and not text.startswith("- "):
                 break
 
-            item = text[1:].strip()
+            item = _yaml_without_comment(text[1:]).strip()
             if not item:
                 raise ValueError(f"line {line_no}: empty block-list item is not supported")
             if item == "-" or item.startswith("- "):
                 raise ValueError(
                     f"line {line_no}: nested block collections are not supported"
                 )
-            if not item.startswith(("'", '"')) and re.search(r"\s#", item):
-                raise ValueError(f"line {line_no}: inline list comments are not supported")
             if not item.startswith(("'", '"')) and (
                 item.startswith(("&", "*", "!", "|", ">", "[", "]", "{", "}"))
                 or item == "?"
@@ -297,12 +294,17 @@ def _parse_yaml_config(path: str) -> dict[str, object]:
             if not raw_key:
                 raise ValueError(f"line {line_no}: missing key")
             key = raw_key.strip()
+            if key.startswith(("'", '"')):
+                key = _parse_yaml_scalar(key, line_no)
+                if not isinstance(key, str):
+                    raise ValueError(f"line {line_no}: mapping key must be a string")
             if key in result:
                 raise ValueError(f"line {line_no}: duplicate key '{key}'")
             index += 1
 
-            if raw_value.strip():
-                result[key] = _parse_yaml_scalar(raw_value.strip(), line_no)
+            raw_value = _yaml_without_comment(raw_value).strip()
+            if raw_value:
+                result[key] = _parse_yaml_scalar(raw_value, line_no)
                 continue
 
             if index < len(lines):
@@ -400,11 +402,38 @@ def _write_atomic_text(path: Path, content: str, *, dry_run: bool) -> bool:
                 pass
         return False
 
+def _mcp_entry_drift(entry: object, server: McpServer) -> str:
+    if not isinstance(entry, dict):
+        return "must be an object"
+    if entry.get("command") != server.command:
+        return f"command must be {server.command!r}"
+    if entry.get("args", []) != list(server.args):
+        return f"args must be {list(server.args)!r}"
+    return ""
+
+
+def _check_existing_mcp_entries(
+    data: dict[str, object], key: str, servers: list[McpServer]
+) -> dict[str, object] | None:
+    entries = data.get(key)
+    if entries is None:
+        return None
+    if not isinstance(entries, dict):
+        raise ValueError(f"`{key}` block must be an object; fix this file manually")
+    for server in servers:
+        if server.name in entries:
+            drift = _mcp_entry_drift(entries[server.name], server)
+            if drift:
+                raise ValueError(
+                    f"{key}.{server.name}: {drift}; existing entry preserved; fix it manually"
+                )
+    return entries
+
+
 @dataclass(frozen=True)
 class _ConfigMergeOutcome:
     config: dict[str, object]
     changed: bool
-    provider_conflict: bool
     required_provider: str | None
 
 
@@ -430,17 +459,27 @@ class _HermesConfigAdapter:
         return _write_atomic_text(self.path, content, dry_run=dry_run)
 
     def add_servers(self, data: dict[str, object], servers: list[McpServer]) -> _ConfigMergeOutcome:
-        mcp_servers = data.get("mcp_servers")
+        mcp_servers = _check_existing_mcp_entries(data, "mcp_servers", servers)
+        for server in servers:
+            if not server.hermes_memory_provider:
+                continue
+            memory = data.get("memory")
+            if memory is not None and not isinstance(memory, dict):
+                raise ValueError("`memory` block must be an object; fix this file manually")
+            current = memory.get("provider") if isinstance(memory, dict) else None
+            if current is not None and current != server.hermes_memory_provider:
+                raise ValueError(
+                    f"memory.provider: existing {current!r} conflicts with required "
+                    f"{server.hermes_memory_provider!r}; preserved; fix it manually"
+                )
+
         changed = False
-        provider_conflict = False
         required_provider: str | None = None
 
         if mcp_servers is None:
             mcp_servers = {}
             data["mcp_servers"] = mcp_servers
             changed = True
-        elif not isinstance(mcp_servers, dict):
-            raise ValueError("`mcp_servers` block must be an object")
 
         for server in servers:
             if server.name not in mcp_servers:
@@ -454,31 +493,21 @@ class _HermesConfigAdapter:
                 skip(f"Hermes config: {server.name} MCP already configured")
 
             if server.hermes_memory_provider:
+                required_provider = server.hermes_memory_provider
                 memory = data.get("memory")
-                if memory is None:
+                if not isinstance(memory, dict):
                     data["memory"] = {"provider": server.hermes_memory_provider}
-                    required_provider = server.hermes_memory_provider
                     changed = True
                     continue
 
-                if not isinstance(memory, dict):
-                    raise ValueError("`memory` block must be an object")
                 current = memory.get("provider")
                 if current is None:
                     memory["provider"] = server.hermes_memory_provider
-                    required_provider = server.hermes_memory_provider
                     changed = True
-                elif current != server.hermes_memory_provider:
-                    provider_conflict = True
-                    warn("Hermes config: existing memory.provider is set; skipped changing it")
-
-                if current == server.hermes_memory_provider:
-                    required_provider = server.hermes_memory_provider
 
         return _ConfigMergeOutcome(
             config=data,
             changed=changed,
-            provider_conflict=provider_conflict,
             required_provider=required_provider,
         )
 
@@ -492,9 +521,8 @@ class _HermesConfigAdapter:
         mcp_servers = data.get("mcp_servers")
         if not isinstance(mcp_servers, dict):
             return False
-        for server in servers:
-            if server.name not in mcp_servers:
-                return False
+        if any(_mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers):
+            return False
 
         if required_provider is None:
             return True
@@ -517,15 +545,13 @@ class _OmpConfigAdapter:
         return _write_atomic_text(self.path, json.dumps(data, indent=2) + "\n", dry_run=dry_run)
 
     def add_servers(self, data: dict[str, object], servers: list[McpServer]) -> bool:
-        mcp_servers = data.get("mcpServers")
+        mcp_servers = _check_existing_mcp_entries(data, "mcpServers", servers)
         changed = False
 
         if mcp_servers is None:
             mcp_servers = {}
             data["mcpServers"] = mcp_servers
             changed = True
-        elif not isinstance(mcp_servers, dict):
-            raise ValueError("`mcpServers` block must be an object")
 
         for server in servers:
             if server.name in mcp_servers:
@@ -572,19 +598,9 @@ class _OmpConfigAdapter:
         if not isinstance(mcp_servers, dict):
             return False
 
-        for server in servers:
-            entry = mcp_servers.get(server.name)
-            if not isinstance(entry, dict):
-                return False
-            if entry.get("command") != server.command:
-                return False
-            args = entry.get("args", [])
-            if not server.args and args:
-                return False
-            if server.args and args != list(server.args):
-                return False
-
-        return True
+        return not any(
+            _mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers
+        )
 
 
 _HERMES_CONFIG_ADAPTER = _HermesConfigAdapter(path=HERMES_CONFIG_PATH)
@@ -648,13 +664,13 @@ def configure_hermes(servers: list[McpServer], *, dry_run: bool) -> bool:
         warn(f"{_HERMES_CONFIG_ADAPTER.path}: {exc}")
         return False
 
-    required_provider = None if outcome.provider_conflict else outcome.required_provider
+    required_provider = outcome.required_provider
     if not _HERMES_CONFIG_ADAPTER.validate(
         outcome.config,
         servers,
         required_provider=required_provider,
     ):
-        warn("Hermes config: post-merge validation failed")
+        warn(f"{_HERMES_CONFIG_ADAPTER.path}: post-merge validation failed")
         return False
 
     if not outcome.changed:
@@ -723,7 +739,7 @@ OMP_AGENT_CONFIG_CONTRACT = (
     ("compaction", "thresholdTokens: 150000"),
     ("compaction", "idleEnabled: true"),
     ("compaction", "handoffSaveToDisk: true"),
-    ("compaction", "methodOrder:"),
+    ("compaction", "methodOrder: [handoff, remote, soft]"),
     ("skills", "enableClaudeUser: true"),
     ("skills", "enableAgentsUser: false"),
     *(("extensions", name) for name in _OMP_HOOK_FILES),
@@ -747,8 +763,8 @@ skills:
 """
 
 
-def omp_config_block(text: str, key: str) -> list[str]:
-    """Stripped direct-child lines under top-level ``key:``."""
+def omp_config_block(text: str, key: str, *, include_nested: bool = False) -> list[str]:
+    """Direct children under top-level ``key:``, optionally retaining their bodies."""
     lines: list[str] = []
     inside = False
     child_indent: int | None = None
@@ -759,7 +775,10 @@ def omp_config_block(text: str, key: str) -> list[str]:
 
         indent = len(line) - len(line.lstrip())
         if indent == 0:
-            inside = line.split(":", 1)[0].strip() == key
+            try:
+                inside = _parse_yaml_scalar(line.split(":", 1)[0], 0) == key
+            except ValueError:
+                inside = False
             child_indent = None
             continue
         if not inside:
@@ -769,12 +788,16 @@ def omp_config_block(text: str, key: str) -> list[str]:
         if indent < child_indent:
             inside = False
             child_indent = None
+        elif include_nested and lines and (
+            indent > child_indent or stripped == "-" or stripped.startswith("- ")
+        ):
+            lines[-1] += "\n" + line[child_indent:]
         elif indent == child_indent:
             lines.append(stripped)
     return lines
 
 
-def _omp_scalar_without_comment(raw: str) -> str:
+def _yaml_without_comment(raw: str) -> str:
     quote: str | None = None
     index = 0
     while index < len(raw):
@@ -804,15 +827,14 @@ def _omp_contract_line_matches(line: str, marker: str) -> bool:
     if not separator:
         return marker in line
 
-    actual_key, separator, actual_raw = line.partition(":")
-    if not separator or actual_key.strip() != expected_key.strip():
+    actual_key, separator, _ = line.partition(":")
+    if not separator:
         return False
-    if not expected_raw.strip():
-        return True
-
     try:
-        expected = _parse_yaml_scalar(_omp_scalar_without_comment(expected_raw), 0)
-        actual = _parse_yaml_scalar(_omp_scalar_without_comment(actual_raw), 0)
+        if _parse_yaml_scalar(actual_key, 0) != expected_key.strip():
+            return False
+        expected = _parse_yaml_scalar(expected_raw, 0)
+        actual = _parse_yaml_config(line).get(expected_key.strip())
     except ValueError:
         return False
     return type(actual) is type(expected) and actual == expected
@@ -825,7 +847,7 @@ def omp_config_drift(text: str) -> list[str]:
         for block, marker in OMP_AGENT_CONFIG_CONTRACT
         if not any(
             _omp_contract_line_matches(line, marker)
-            for line in omp_config_block(text, block)
+            for line in omp_config_block(text, block, include_nested=True)
         )
     ]
 

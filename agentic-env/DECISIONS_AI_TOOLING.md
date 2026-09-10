@@ -148,6 +148,8 @@ Mandatory contract = the OMP layer. Installer-enforced (`agentic-configure-agent
 
 - Clean-host contract (2026-09-02): `uv tool install --force . && agentic-bootstrap` on a host with a `~/.dotfiles` checkout yields exactly this stack; version drift above the pins is tolerated, skill/MCP/hook drift is not.
 - Fresh-machine reproducibility: `agentic-configure-agent-mcps` seeds `~/.omp/agent/config.yml` from this contract when absent and verifies it when present (`converge_omp_agent_config`; existing user YAML is never rewritten).
+- Configuration ownership (2026-09-10): notify-only for existing MCP definitions. Add missing entries; report mismatched commands/arguments and Hermes memory-provider conflicts for manual correction without rewriting the affected file. Existing OMP settings YAML remains read-only. The explicit OMP exclusion/default-gating policy is unchanged; it is not general repair authority.
+- Acceptance scope (2026-09-10): native Apple Silicon macOS and Arch Linux x86_64, with the existing Debian container retained. Intel macOS is out of scope; direct CachyOS verification is deferred. An Arch run is Arch-family proxy evidence, not a verified CachyOS run; successful runs and exact OS/architecture coverage are recorded in the README.
 - The concrete settings are the **Wiring** line of each layer above: harness (pin, contract keys, `node_repl`), context I/O (excluded servers, prose ban), compaction (`compaction.*`), memory (`memory.backend`, `mnemopi.polyphonicRecall`), code graph (`mcp.json` gate), skills (`skill-packs.json`, `skills.enableClaudeUser`, `skills.enableAgentsUser`), hooks (`extensions`).
 
 ## Upstream watch

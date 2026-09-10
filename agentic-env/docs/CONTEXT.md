@@ -78,8 +78,8 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - _Avoid_: Project memory, skill install
 
 - **Managed MCP entry**
-  - A user-level MCP configuration entry named `codebase-memory-mcp` or `agentmemory` that `agentic-env` owns and converges to its curated definition while preserving unrelated agent settings. On OMP roots, `agentmemory` and `lean-ctx` are excluded entries: purged from `mcpServers` and kept in `disabledServers` so a re-import cannot mount them. Malformed configuration is rejected without modification.
-  - _Avoid_: Any MCP entry, user-owned configuration
+  - A user-level MCP entry whose expected definition is tracked by `agentic-env`: missing entries are added, while mismatches in existing entries are reported for manual correction without overwriting them. Explicit primary-harness exclusion and gating policies still apply; malformed configuration is rejected without modification.
+  - _Avoid_: Automatically repaired entry, any MCP entry
 
 - **Read-interception policy**
   - A hook or instruction block that gates or redirects an agent's file reads and searches toward a query-first tool. Scoped per supported agent, counted across every configuration file that agent loads rather than the files in its own directory. At most one may be active for a given agent.
@@ -124,7 +124,7 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - _Avoid_: Per-script command wrapper copies
 
 - **Smoke test**
-  - The fresh-install contract exercised in the Docker smoke environment (Debian bookworm) and on the supported hosts (macOS, CachyOS); it must pass before a host is accepted as supported.
+  - The same fresh-install acceptance contract applied to each declared OS/architecture target; passing on one target does not establish support for another.
 
 - **Smoke contract**
   - Process succeeds when: tools are installed, binaries are callable, `agentic-stack-doctor` exits successfully (the OMP mandatory checks), and Hermes has its project memory stack servers and matching global skills.
@@ -134,15 +134,15 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - _Avoid_: Line coverage, mocked installer success
 
 - **Stack doctor**
-  - A read-only host diagnostic (`agentic-stack-doctor`) with two tiers. Mandatory checks cover the primary harness: OMP binaries and versions, both OMP `mcp.json` roots wired and gated (including the `node_repl` built-in) with excluded servers absent, `~/.claude.json` free of excluded servers and of read-interception prose (OMP imports it), the `config.yml` contract, each hook registered exactly once with its file present, the curated skill roster, and no `lean-ctx` skill directory. Secondary checks (Hermes wiring; Hermes, Claude Code, Codex, agentmemory binaries) only warn with a `TODO secondary` tag. It exits unsuccessfully with corrective commands only on a mandatory failure, never repairs, and runs as the final phase of `agentic-bootstrap` and `agentic-update-stack`.
+  - Read-only diagnosis of the primary-harness wiring contract: OMP failures are mandatory, while Hermes wiring and secondary-agent binaries only warn. It runs at the end of bootstrap/update, exits unsuccessfully only for mandatory failures, and gives corrective guidance without repairing configurations.
   - _Avoid_: Smoke test, automatic repair
 
 - **Supported host**
-  - A macOS or Arch Linux-family machine, including CachyOS, on which the complete machine-provisioning and stack-doctor contracts are verified.
-  - _Avoid_: Any Unix-like host, Debian-compatible host
+  - An OS/architecture target with successful clean-host provisioning evidence, not merely a compatible release asset. The intended targets are Apple Silicon macOS and Arch Linux x86_64; direct CachyOS verification is deferred, and Intel macOS is outside acceptance scope.
+  - _Avoid_: Any Unix-like host, unverified compatible host
 
 - **Compatibility floor**
-  - Host prerequisites required by the agent stack: Python 3.12+, Node.js 20+, `curl`, `git`, and trusted CA certificates. The Linux fresh-install smoke environment is Debian bookworm (`node:20-bookworm-slim`); supported hosts stay macOS and CachyOS.
+  - The prerequisites needed before machine provisioning: Python 3.12+, Node.js 20+ with npm, uv, curl, git, trusted CA certificates, and writable user-level installation paths. Platform-specific preparation and acceptance evidence belong in the runbook.
 
 - **Documentation scope**
   - `agentic-env/README.md`: runbook and operating instructions.
