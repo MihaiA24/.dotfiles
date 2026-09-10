@@ -18,7 +18,7 @@
   - _Avoid_: Supported agent, secondary agent (unqualified)
 
 - **Clean host**
-  - A supported host with no prior agent-stack installation and a `~/.dotfiles` checkout present. The contract: `uv tool install --force . && agentic-bootstrap` yields exactly the documented stack with zero skill, MCP, or hook drift. Newer tool versions than the pins are tolerated drift; skill, MCP, and hook drift are not.
+  - A supported host being provisioned from scratch, with no prior agent-stack installation or agent-specific configuration. It is the target of a fresh install, independent of any existing workstation’s installed tools or configuration.
   - _Avoid_: Fresh machine (unqualified), blank VM
 
 - **Machine provisioning**
