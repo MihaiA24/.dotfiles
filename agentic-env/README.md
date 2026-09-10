@@ -64,7 +64,7 @@ Docs:
   - Ends with `agentic-stack-doctor`; a mandatory-check failure makes the update exit non-zero.
   - Does not self-update `agentic-env`; use `uv tool upgrade agentic-env`.
 - `agentic-stack-doctor`
-  - Read-only diagnosis of the stack contract. Mandatory = the OMP layer (binaries, both `mcp.json` roots wired + gated incl. the `node_repl` built-in, excluded servers absent there and in `~/.claude.json`, no read-interception prose incl. `~/.claude.json`, `config.yml` contract, hooks registered once and present, curated skill roster, no `lean-ctx` skill dir). Hermes wiring (incl. a stale `lean-ctx` entry) and the Hermes / Claude Code / Codex binaries only warn (`TODO secondary`). Exit 1 only on a mandatory failure; prints the corrective command per failure; never repairs.
+  - Read-only diagnosis of the stack contract. Mandatory = the OMP layer (binaries, both `mcp.json` roots wired + gated incl. the `node_repl` built-in, excluded servers absent there and in `~/.claude.json`, no read-interception prose incl. `~/.claude.json`, `config.yml` contract, hooks registered once and present, curated skill roster, no `lean-ctx` skill dir). Hermes wiring (incl. a stale `lean-ctx` entry) and secondary-agent binaries only warn (`TODO secondary`). Exit 1 only on a mandatory failure; prints corrective guidance per failure; never repairs.
   - Checks actual managed MCP definitions and the compaction method order (`handoff`, `remote`, `soft`), not just entry names. Existing definition mismatches require manual correction; rerunning the add-missing-only configurator does not repair them.
 - Checkout development runs the package modules through `uv run python -m agentic_env.<module>`; installed workflows use the `agentic-*` commands.
 - `setup_helpers.sh`
@@ -231,6 +231,17 @@ Files:
 - `.dockerignore` – trims compose build context for faster local/CI builds
 
 
+### Verified acceptance
+
+[Run 34526778331](https://github.com/MihaiA24/.dotfiles/actions/runs/34526778331) passed on 2026-09-10 at code commit [`2cb1f08f9d0a7538ecef12e7532dfaee554a6400`](https://github.com/MihaiA24/.dotfiles/commit/2cb1f08f9d0a7538ecef12e7532dfaee554a6400). Each job provisioned an empty, isolated HOME as an ordinary user, then repeated the complete checks with `SKIP_INSTALL=1` against the retained installation.
+
+| Recorded environment | Architecture | Fresh install | Checks-only |
+| --- | --- | --- | --- |
+| Native macOS 15.7.9, build 24G830 | arm64 | Passed | Passed |
+| Arch Linux rolling container, `VERSION_ID=20260906.0.587075` | x86_64 | Passed | Passed |
+| Debian GNU/Linux 12 (bookworm) container | x86_64 | Passed | Passed |
+
+Both Linux containers used the Ubuntu runner's `6.17.0-1022-azure` kernel; this is distro-userland evidence, not native distro-boot evidence. Direct CachyOS verification remains deferred. Intel macOS is outside acceptance scope. Reviewed component versions and installer checksums were unchanged.
 
 ### CI contract
 
@@ -242,7 +253,7 @@ Files:
 | macOS 15 arm64 | Native `macos-15` GitHub runner | Apple Silicon only |
 | Arch Linux x86_64 | Official `archlinux:base` container on Ubuntu | Arch-family proxy, not direct CachyOS verification |
 
-Push and pull-request triggers cover `agentic-env/**`, `omp/hooks/**`, and the workflow itself. `workflow_dispatch` remains available through **Actions → Agentic env smoke test → Run workflow**. Every job uses the same smoke contract; a failed check fails its job.
+Push and pull-request triggers cover `agentic-env/**`, `omp/hooks/**`, and the workflow itself. `workflow_dispatch` remains available through **Actions → Agentic env smoke test → Run workflow**. Every job runs the same smoke contract twice: a fresh installation, then checks-only against that retained installation; a failed check fails its job.
 
 Prerequisites are prepared before provisioning: Python 3.12+, Node.js 20+/npm, uv, curl, git, CA certificates, shell/archive utilities, and C/C++ build tools. Arch uses `pacman -Syu` because it is rolling. Containers require Docker Engine and Compose with amd64 support (native or emulated). Native macOS requires working Command Line Tools/Xcode.
 
@@ -306,6 +317,7 @@ The run is successful only if all checks pass:
 6. Hermes config checks pass:
    - `~/.hermes/config.yaml` contains the reviewed commands and arguments for `codebase-memory-mcp` and `agentmemory`, plus `memory.provider: agentmemory` (a stale `lean-ctx` entry is a doctor warning, not a smoke failure)
    - matching `codebase-memory-mcp`, `agentmemory`, and `ponytail` descriptors exist under `~/.hermes/skills`; missing descriptors fail smoke even though the doctor only warns
+7. The pinned skills CLI reports the reviewed version through `npx --yes skills@<reviewed-version> --version`; fresh provisioning does not require a global `skills` binary.
 
 ## Design and tradeoffs
 - **Container bases:** `node:20-bookworm-slim` for the Debian baseline and official `archlinux:base` for rolling Arch x86_64; macOS acceptance executes natively.

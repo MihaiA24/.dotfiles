@@ -134,7 +134,7 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - _Avoid_: Line coverage, mocked installer success
 
 - **Stack doctor**
-  - A read-only host diagnostic (`agentic-stack-doctor`) with two tiers. Mandatory checks cover the primary harness: OMP binaries and versions, both OMP `mcp.json` roots wired and gated (including the `node_repl` built-in) with excluded servers absent, `~/.claude.json` free of excluded servers and of read-interception prose (OMP imports it), the `config.yml` contract, each hook registered exactly once with its file present, the curated skill roster, and no `lean-ctx` skill directory. Secondary checks (Hermes wiring; Hermes, Claude Code, Codex, agentmemory binaries) only warn with a `TODO secondary` tag. It exits unsuccessfully with corrective commands only on a mandatory failure, never repairs, and runs as the final phase of `agentic-bootstrap` and `agentic-update-stack`.
+  - Read-only diagnosis of the primary-harness wiring contract: OMP failures are mandatory, while Hermes wiring and secondary-agent binaries only warn. It runs at the end of bootstrap/update, exits unsuccessfully only for mandatory failures, and gives corrective guidance without repairing configurations.
   - _Avoid_: Smoke test, automatic repair
 
 - **Supported host**
