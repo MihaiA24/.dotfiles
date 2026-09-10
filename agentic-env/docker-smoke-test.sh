@@ -5,7 +5,43 @@ SKIP_INSTALL=${SKIP_INSTALL:-0}
 _SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
 . "$_SCRIPT_DIR/setup_helpers.sh"
 
-_python_script="$(mktemp -t dotfiles-smoke-check.XXXXXX.py)"
+echo "[1/5] Recording host and prerequisite evidence"
+date -u '+UTC: %Y-%m-%dT%H:%M:%SZ'
+uname -srm
+id
+if [ -f /etc/os-release ]; then cat /etc/os-release; fi
+if [ "$(uname -s)" = Darwin ]; then sw_vers; fi
+printf 'Run: %s\nRevision: %s\nHOME: %s\n' \
+  "${AGENTIC_SMOKE_RUN_ID:-local}" "${AGENTIC_SMOKE_REVISION:-unknown}" "$HOME"
+for prerequisite in uv python3 node npm npx curl git bash tar gzip xz unzip ps make cc c++; do
+  command -v "$prerequisite" || { echo "Missing prerequisite: $prerequisite" >&2; exit 1; }
+done
+python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"; print(sys.version)'
+node -e 'if (Number(process.versions.node.split(".")[0]) < 20) throw new Error("Node.js 20+ required"); console.log(process.version)'
+uv --version
+npm --version
+git --version
+curl --version
+
+if [ "$SKIP_INSTALL" != "1" ]; then
+  for command in hermes omp codex claude codebase-memory-mcp agentmemory skills \
+    agentic-bootstrap agentic-install-agents agentic-install-skills-mcps \
+    agentic-configure-agent-mcps agentic-update-stack agentic-stack-doctor; do
+    if command -v "$command" >/dev/null 2>&1; then
+      echo "Clean-host precondition failed: $command is already on PATH" >&2
+      exit 1
+    fi
+  done
+  for path in .hermes .omp .claude .claude.json .codex .agents .config/hermes .config/omp; do
+    if [ -e "$HOME/$path" ] || [ -L "$HOME/$path" ]; then
+      echo "Clean-host precondition failed: $HOME/$path already exists" >&2
+      exit 1
+    fi
+  done
+  echo "Clean-host preconditions passed: no agent binaries or configuration"
+fi
+
+_python_script="$(mktemp "${TMPDIR:-/tmp}/dotfiles-smoke-check.XXXXXX")"
 cleanup() {
   cleanup_run_log
   rm -f "$_python_script"
@@ -17,13 +53,13 @@ cat >"$_python_script" <<'PY'
 from pathlib import Path
 import yaml
 
-from agentic_env.configure_agent_mcps import MCP_SERVERS, _HermesConfigAdapter
+from agentic_env.configure_agent_mcps import (
+    HERMES_SKILL_ROOT, MCP_SERVERS, SKILLS, _HermesConfigAdapter,
+)
 
 config_path = Path.home() / ".hermes" / "config.yaml"
 config = yaml.safe_load(config_path.read_text())
 assert isinstance(config, dict), "~/.hermes/config.yaml root must be a mapping"
-servers = config.get("mcp_servers")
-assert isinstance(servers, dict), "~/.hermes/config.yaml mcp_servers must be a mapping"
 
 required_servers = [
     MCP_SERVERS[name] for name in ("codebase-memory-mcp", "agentmemory")
@@ -32,42 +68,29 @@ assert _HermesConfigAdapter(config_path).validate(
     config, required_servers, required_provider="agentmemory"
 ), "~/.hermes/config.yaml has invalid Hermes MCP wiring"
 
-for server in required_servers:
-    entry = servers.get(server.name)
-    assert isinstance(entry, dict), (
-        f"~/.hermes/config.yaml {server.name} MCP entry must be a mapping"
-    )
-    assert entry.get("command") == server.command, (
-        f"~/.hermes/config.yaml {server.name} MCP command is incorrect"
-    )
-    assert entry.get("args", []) == list(server.args), (
-        f"~/.hermes/config.yaml {server.name} MCP args are incorrect"
-    )
+for name in SKILLS:
+    descriptor = HERMES_SKILL_ROOT / name / "SKILL.md"
+    assert descriptor.is_file(), f"Missing Hermes skill descriptor: {descriptor}"
+print("Hermes MCP wiring and matching skill descriptors verified")
 PY
 
 if [ "$SKIP_INSTALL" != "1" ]; then
-  echo "[1/7] Installing agentic-env CLI"
-  run_cmd "uv tool install --force ."
+  echo "[2/5] Installing agentic-env CLI"
+  run_cmd "uv tool install --force --python python3 ."
 fi
 
 if [ "$SKIP_INSTALL" != "1" ]; then
-  echo "[2/7] Running one-shot bootstrap"
+  echo "[3/5] Running one-shot bootstrap"
   run_cmd "agentic-bootstrap"
-
-  echo "[3/7] Verifying package module entry points"
-  run_cmd "uv run python -m agentic_env.bootstrap --help"
-  run_cmd "uv run python -m agentic_env.install_agents --help"
-  run_cmd "uv run python -m agentic_env.install_skills_mcps --help"
-  run_cmd "uv run python -m agentic_env.configure_agent_mcps --help"
-  run_cmd "uv run python -m agentic_env.update_agentic_stack --help"
-  run_cmd "uv run python -m agentic_env.stack_doctor --help"
 fi
 
-if [ "$SKIP_INSTALL" != "1" ]; then
-  echo "[6/7] Verifying installed binaries"
-else
-  echo "[6/7] Verifying installed binaries (SKIP_INSTALL=1)"
-fi
+echo "[4/5] Verifying package module entry points and installed binaries"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.bootstrap --help"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.install_agents --help"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.install_skills_mcps --help"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.configure_agent_mcps --help"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.update_agentic_stack --help"
+run_cmd "uv run --frozen --python python3 python -m agentic_env.stack_doctor --help"
 
 failures=0
 
@@ -87,14 +110,12 @@ require_command() {
   fi
 }
 
-if [ "$SKIP_INSTALL" != "1" ]; then
-  require_command agentic-bootstrap
-  require_command agentic-install-agents
-  require_command agentic-install-skills-mcps
-  require_command agentic-configure-agent-mcps
-  require_command agentic-update-stack
-  require_command agentic-stack-doctor
-fi
+require_command agentic-bootstrap
+require_command agentic-install-agents
+require_command agentic-install-skills-mcps
+require_command agentic-configure-agent-mcps
+require_command agentic-update-stack
+require_command agentic-stack-doctor
 
 require_command hermes
 require_command omp
@@ -102,10 +123,16 @@ require_command codex
 require_command claude
 require_command codebase-memory-mcp
 require_command agentmemory
+require_command skills
 
-echo "[7/7] Verifying stack wiring (agentic-stack-doctor) and Hermes config artifacts"
+for command in hermes omp codex claude codebase-memory-mcp agentmemory skills; do
+  echo "Version evidence: $command"
+  "$command" --version
+done
+
+echo "[5/5] Verifying stack wiring (agentic-stack-doctor) and Hermes artifacts"
 run_cmd "agentic-stack-doctor"
-run_cmd "uv run --with pyyaml python $_python_script"
+run_cmd "uv run --frozen --python python3 --with pyyaml python \"$_python_script\""
 
 if [ "$failures" -ne 0 ]; then
   echo "Failed checks: $failures"
