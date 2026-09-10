@@ -177,6 +177,55 @@ class StackDoctorTests(unittest.TestCase):
             code, _ = _run(host)
             self.assertEqual(code, 0)
 
+    def test_agent_config_rejects_false_comment_and_nested_skill_root_without_rewriting(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            host = _Host(Path(temp_dir))
+            template = host.agent_config.read_text(encoding="utf-8")
+            cases = (
+                (
+                    template.replace(
+                        "  enableClaudeUser: true\n",
+                        "  enableClaudeUser: false # enableClaudeUser: true\n",
+                    ),
+                    1,
+                ),
+                (
+                    template.replace(
+                        "  enableClaudeUser: true\n",
+                        "  nested:\n    enableClaudeUser: true\n",
+                    ),
+                    1,
+                ),
+                (
+                    template.replace(
+                        "  enableClaudeUser: true\n",
+                        "  enableClaudeUser: 1\n",
+                    ),
+                    1,
+                ),
+                (
+                    template.replace(
+                        "  backend: mnemopi\n",
+                        '  backend: "mnemopi" # configured backend\n',
+                    ),
+                    0,
+                ),
+                (
+                    template.replace(
+                        "  enableClaudeUser: true\n",
+                        "  enableClaudeUser: true # configured skill root\n",
+                    ),
+                    0,
+                ),
+            )
+            for config, expected_code in cases:
+                with self.subTest(config=config):
+                    host.agent_config.write_text(config, encoding="utf-8")
+                    original = host.agent_config.read_bytes()
+                    code, _ = _run(host)
+                    self.assertEqual(code, expected_code)
+                    self.assertEqual(host.agent_config.read_bytes(), original)
+
     def test_hermes_lean_ctx_entry_only_warns(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             host = _Host(Path(temp_dir))
