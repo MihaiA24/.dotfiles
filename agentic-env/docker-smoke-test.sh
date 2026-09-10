@@ -53,11 +53,13 @@ trap cleanup EXIT
 # Hermes-side wiring is secondary (doctor only warns); the smoke still pins it.
 cat >"$_python_script" <<'PY'
 from pathlib import Path
+import subprocess
 import yaml
 
 from agentic_env.configure_agent_mcps import (
     HERMES_SKILL_ROOT, MCP_SERVERS, SKILLS, _HermesConfigAdapter,
 )
+from agentic_env.stack_metadata import SKILLS_CLI_PACKAGE, SKILLS_CLI_VERSION
 
 config_path = Path.home() / ".hermes" / "config.yaml"
 config = yaml.safe_load(config_path.read_text())
@@ -74,6 +76,12 @@ for name in SKILLS:
     descriptor = HERMES_SKILL_ROOT / name / "SKILL.md"
     assert descriptor.is_file(), f"Missing Hermes skill descriptor: {descriptor}"
 print("Hermes MCP wiring and matching skill descriptors verified")
+
+version = subprocess.check_output(
+    ["npx", "--yes", SKILLS_CLI_PACKAGE, "--version"], text=True,
+).strip()
+assert version == SKILLS_CLI_VERSION, f"skills CLI version mismatch: {version}"
+print(f"skills CLI: {version}")
 PY
 
 if [ "$SKIP_INSTALL" != "1" ]; then
@@ -125,9 +133,8 @@ require_command codex
 require_command claude
 require_command codebase-memory-mcp
 require_command agentmemory
-require_command skills
 
-for command in hermes omp codex claude codebase-memory-mcp agentmemory skills; do
+for command in hermes omp codex claude codebase-memory-mcp agentmemory; do
   echo "Version evidence: $command"
   "$command" --version
 done
