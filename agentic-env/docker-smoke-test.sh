@@ -54,21 +54,20 @@ trap cleanup EXIT
 cat >"$_python_script" <<'PY'
 from pathlib import Path
 import subprocess
-import yaml
 
 from agentic_env.configure_agent_mcps import (
-    HERMES_SKILL_ROOT, MCP_SERVERS, SKILLS, _HermesConfigAdapter,
+    HERMES_SKILL_ROOT, MCP_SERVERS, SKILLS, HermesConfigAdapter, load_yaml_object,
 )
 from agentic_env.stack_metadata import SKILLS_CLI_PACKAGE, SKILLS_CLI_VERSION
 
 config_path = Path.home() / ".hermes" / "config.yaml"
-config = yaml.safe_load(config_path.read_text())
-assert isinstance(config, dict), "~/.hermes/config.yaml root must be a mapping"
+config = load_yaml_object(config_path)
+assert config, "~/.hermes/config.yaml must be a non-empty mapping"
 
 required_servers = [
     MCP_SERVERS[name] for name in ("codebase-memory-mcp", "agentmemory")
 ]
-assert _HermesConfigAdapter(config_path).validate(
+assert HermesConfigAdapter(config_path).validate(
     config, required_servers, required_provider="agentmemory"
 ), "~/.hermes/config.yaml has invalid Hermes MCP wiring"
 
@@ -141,7 +140,7 @@ done
 
 echo "[5/5] Verifying stack wiring (agentic-stack-doctor) and Hermes artifacts"
 run_cmd "agentic-stack-doctor"
-run_cmd "uv run --frozen --python \"$_python\" --with pyyaml python \"$_python_script\""
+run_cmd "uv run --frozen --python \"$_python\" python \"$_python_script\""
 
 if [ "$failures" -ne 0 ]; then
   echo "Failed checks: $failures"

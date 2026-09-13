@@ -5,13 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import shutil
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
 from rich.prompt import Prompt
 
 from .common import cmd_exists, console, ok, set_verbose, skip, warn
@@ -180,174 +180,8 @@ def _select_many(
     return list(dict.fromkeys(selected))
 
 
-def _parse_yaml_scalar(raw: str, line_no: int) -> object:
-    text = _yaml_without_comment(raw).strip()
-    if not text:
-        raise ValueError(f"line {line_no}: malformed YAML scalar")
-
-    if text.startswith(('"', "[", "{")):
-        try:
-            value, end = json.JSONDecoder().raw_decode(text)
-        except json.JSONDecodeError as exc:
-            if not (text.startswith("[") and text.endswith("]")):
-                raise ValueError(f"line {line_no}: unsupported YAML scalar: {exc}") from None
-            # YAML flow lists also allow unquoted scalars (`[hermes-cli]`).
-            inner = text[1:-1].strip()
-            return [_parse_yaml_scalar(item, line_no) for item in inner.split(",")] if inner else []
-        if text[end:] and not re.fullmatch(r"\s+#.*", text[end:]):
-            raise ValueError(f"line {line_no}: unexpected content after YAML scalar")
-        return value
-
-    if text.startswith("'"):
-        match = re.fullmatch(r"'((?:[^']|'')*)'(?:\s+#.*)?", text)
-        if not match:
-            raise ValueError(f"line {line_no}: malformed quoted scalar")
-        return match[1].replace("''", "'")
-
-    if text in {"true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"}:
-        return True
-    if text in {"false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF"}:
-        return False
-    if text in {"null", "Null", "NULL", "~"}:
-        return None
-
-    try:
-        return int(text)
-    except ValueError:
-        pass
-    try:
-        return float(text)
-    except ValueError:
-        pass
-    return text
-
-
-def _parse_yaml_config(path: str) -> dict[str, object]:
-    lines: list[tuple[int, int, str]] = []
-    for line_no, raw_line in enumerate(path.splitlines(), start=1):
-        stripped_line = raw_line.rstrip()
-        if not stripped_line.strip() or stripped_line.lstrip().startswith("#"):
-            continue
-
-        indent = len(stripped_line) - len(stripped_line.lstrip(" "))
-        indentation = stripped_line[:indent]
-        if "\t" in indentation:
-            raise ValueError(f"line {line_no}: tabs are not supported in Hermes config")
-        lines.append((line_no, indent, stripped_line[indent:]))
-
-    def parse_sequence(start: int, indent: int) -> tuple[list[object], int]:
-        values: list[object] = []
-        index = start
-        while index < len(lines):
-            line_no, current_indent, text = lines[index]
-            if current_indent < indent:
-                break
-            if current_indent > indent:
-                raise ValueError(
-                    f"line {line_no}: nested block collections are not supported"
-                )
-            if text != "-" and not text.startswith("- "):
-                break
-
-            item = _yaml_without_comment(text[1:]).strip()
-            if not item:
-                raise ValueError(f"line {line_no}: empty block-list item is not supported")
-            if item == "-" or item.startswith("- "):
-                raise ValueError(
-                    f"line {line_no}: nested block collections are not supported"
-                )
-            if not item.startswith(("'", '"')) and (
-                item.startswith(("&", "*", "!", "|", ">", "[", "]", "{", "}"))
-                or item == "?"
-                or item.startswith("? ")
-            ):
-                raise ValueError(
-                    f"line {line_no}: structured block-list item is not supported"
-                )
-            if not item.startswith(("'", '"')) and re.search(r":(?:\s|$)", item):
-                raise ValueError(f"line {line_no}: list mappings are not supported")
-
-            value = _parse_yaml_scalar(item, line_no)
-            if isinstance(value, (dict, list)):
-                raise ValueError(
-                    f"line {line_no}: nested block collections are not supported"
-                )
-            values.append(value)
-            index += 1
-        return values, index
-
-    def parse_mapping(start: int, indent: int) -> tuple[dict[str, object], int]:
-        result: dict[str, object] = {}
-        index = start
-        while index < len(lines):
-            line_no, current_indent, text = lines[index]
-            if current_indent < indent:
-                break
-            if current_indent > indent:
-                raise ValueError(f"line {line_no}: unexpected indentation")
-            if text == "-" or text.startswith("- "):
-                break
-            if ":" not in text:
-                raise ValueError(f"line {line_no}: malformed key/value pair")
-
-            raw_key, raw_value = text.split(":", 1)
-            if not raw_key:
-                raise ValueError(f"line {line_no}: missing key")
-            key = raw_key.strip()
-            if key.startswith(("'", '"')):
-                key = _parse_yaml_scalar(key, line_no)
-                if not isinstance(key, str):
-                    raise ValueError(f"line {line_no}: mapping key must be a string")
-            if key in result:
-                raise ValueError(f"line {line_no}: duplicate key '{key}'")
-            index += 1
-
-            raw_value = _yaml_without_comment(raw_value).strip()
-            if raw_value:
-                result[key] = _parse_yaml_scalar(raw_value, line_no)
-                continue
-
-            if index < len(lines):
-                _, next_indent, next_text = lines[index]
-                if (
-                    next_indent >= current_indent
-                    and (next_text == "-" or next_text.startswith("- "))
-                ):
-                    result[key], index = parse_sequence(index, next_indent)
-                    continue
-                if next_indent > current_indent:
-                    result[key], index = parse_mapping(index, next_indent)
-                    continue
-            result[key] = None
-        return result, index
-
-    if not lines:
-        return {}
-    result, index = parse_mapping(0, lines[0][1])
-    if index != len(lines):
-        line_no, _, text = lines[index]
-        if text == "-" or text.startswith("- "):
-            raise ValueError(f"line {line_no}: block list has no mapping key")
-        raise ValueError(f"line {line_no}: malformed mixed collection")
-    return result
-
-
-def _dump_yaml_config(data: dict[str, object], *, indent: int = 0) -> str:
-    lines: list[str] = []
-    prefix = " " * indent
-
-    for key, value in data.items():
-        if isinstance(value, dict) and value:
-            lines.append(f"{prefix}{key}:")
-            lines.append(_dump_yaml_config(value, indent=indent + 2))
-            continue
-
-        lines.append(f"{prefix}{key}: {json.dumps(value)}")
-
-    return "\n".join(lines)
-
-
-def _load_json_object(path: Path) -> dict[str, object] | None:
+def load_json_object(path: Path) -> dict[str, object] | None:
+    """Parsed JSON object; ``{}`` when absent, ``None`` (after a warning) when unusable."""
     if not path.exists():
         return {}
     try:
@@ -360,6 +194,22 @@ def _load_json_object(path: Path) -> dict[str, object] | None:
         return None
     return value
 
+
+def load_yaml_object(path: Path) -> dict[str, object] | None:
+    """Parsed YAML mapping; ``{}`` when absent or empty, ``None`` (after a warning) when unusable."""
+    if not path.exists():
+        return {}
+    try:
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        warn(f"{path}: malformed YAML config ({exc})")
+        return None
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        warn(f"{path}: root YAML value is not a mapping; skipped")
+        return None
+    return value
 
 
 def _write_atomic_text(path: Path, content: str, *, dry_run: bool) -> bool:
@@ -402,7 +252,7 @@ def _write_atomic_text(path: Path, content: str, *, dry_run: bool) -> bool:
                 pass
         return False
 
-def _mcp_entry_drift(entry: object, server: McpServer) -> str:
+def mcp_entry_drift(entry: object, server: McpServer) -> str:
     if not isinstance(entry, dict):
         return "must be an object"
     if entry.get("command") != server.command:
@@ -422,7 +272,7 @@ def _check_existing_mcp_entries(
         raise ValueError(f"`{key}` block must be an object; fix this file manually")
     for server in servers:
         if server.name in entries:
-            drift = _mcp_entry_drift(entries[server.name], server)
+            drift = mcp_entry_drift(entries[server.name], server)
             if drift:
                 raise ValueError(
                     f"{key}.{server.name}: {drift}; existing entry preserved; fix it manually"
@@ -438,24 +288,14 @@ class _ConfigMergeOutcome:
 
 
 @dataclass(frozen=True)
-class _HermesConfigAdapter:
+class HermesConfigAdapter:
     path: Path
 
     def _read(self) -> dict[str, object] | None:
-        if not self.path.exists():
-            return {}
-
-        raw = self.path.read_text(encoding="utf-8")
-        try:
-            return _parse_yaml_config(raw)
-        except Exception as exc:
-            warn(f"{self.path}: malformed YAML config ({exc})")
-            return None
+        return load_yaml_object(self.path)
 
     def _write(self, data: dict[str, object], *, dry_run: bool) -> bool:
-        content = _dump_yaml_config(data).rstrip()
-        if content:
-            content += "\n"
+        content = yaml.safe_dump(data, sort_keys=False, allow_unicode=True) if data else ""
         return _write_atomic_text(self.path, content, dry_run=dry_run)
 
     def add_servers(self, data: dict[str, object], servers: list[McpServer]) -> _ConfigMergeOutcome:
@@ -521,7 +361,7 @@ class _HermesConfigAdapter:
         mcp_servers = data.get("mcp_servers")
         if not isinstance(mcp_servers, dict):
             return False
-        if any(_mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers):
+        if any(mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers):
             return False
 
         if required_provider is None:
@@ -539,7 +379,7 @@ class _OmpConfigAdapter:
     path: Path
 
     def _read(self) -> dict[str, object] | None:
-        return _load_json_object(self.path)
+        return load_json_object(self.path)
 
     def _write(self, data: dict[str, object], *, dry_run: bool) -> bool:
         return _write_atomic_text(self.path, json.dumps(data, indent=2) + "\n", dry_run=dry_run)
@@ -599,11 +439,11 @@ class _OmpConfigAdapter:
             return False
 
         return not any(
-            _mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers
+            mcp_entry_drift(mcp_servers.get(server.name), server) for server in servers
         )
 
 
-_HERMES_CONFIG_ADAPTER = _HermesConfigAdapter(path=HERMES_CONFIG_PATH)
+_HERMES_CONFIG_ADAPTER = HermesConfigAdapter(path=HERMES_CONFIG_PATH)
 _OMP_CONFIG_ADAPTERS = [_OmpConfigAdapter(path=path) for path in OMP_MCP_PATHS]
 
 
@@ -727,22 +567,22 @@ def configure_omp(servers: list[McpServer], *, dry_run: bool) -> bool:
     return ok_all
 
 
-_OMP_HOOK_FILES = ("verification-recorder.ts", "retention-canary.ts")
+OMP_HOOK_FILES = ("verification-recorder.ts", "retention-canary.ts")
 
-# Settings that must be present in ~/.omp/agent/config.yml as (top-level block,
-# "key: value" line), keyed per settings-schema.ts at the pinned OMP_VERSION
+# Settings that must hold in ~/.omp/agent/config.yml as (top-level block, key,
+# value), keyed per settings-schema.ts at the pinned OMP_VERSION
 # (DECISIONS_AI_TOOLING.md "Live wiring": compaction tuning, single memory
-# owner, hooks, skill-store discipline).
+# owner, skill-store discipline). omp_config_drift also requires every
+# OMP_HOOK_FILES entry under extensions:.
 OMP_AGENT_CONFIG_CONTRACT = (
-    ("memory", "backend: mnemopi"),
-    ("mnemopi", "polyphonicRecall: false"),
-    ("compaction", "thresholdTokens: 150000"),
-    ("compaction", "idleEnabled: true"),
-    ("compaction", "handoffSaveToDisk: true"),
-    ("compaction", "methodOrder: [handoff, remote, soft]"),
-    ("skills", "enableClaudeUser: true"),
-    ("skills", "enableAgentsUser: false"),
-    *(("extensions", name) for name in _OMP_HOOK_FILES),
+    ("memory", "backend", "mnemopi"),
+    ("mnemopi", "polyphonicRecall", False),
+    ("compaction", "thresholdTokens", 150000),
+    ("compaction", "idleEnabled", True),
+    ("compaction", "handoffSaveToDisk", True),
+    ("compaction", "methodOrder", ["handoff", "remote", "soft"]),
+    ("skills", "enableClaudeUser", True),
+    ("skills", "enableAgentsUser", False),
 )
 
 _OMP_AGENT_CONFIG_TEMPLATE = """memory:
@@ -763,93 +603,30 @@ skills:
 """
 
 
-def omp_config_block(text: str, key: str, *, include_nested: bool = False) -> list[str]:
-    """Direct children under top-level ``key:``, optionally retaining their bodies."""
-    lines: list[str] = []
-    inside = False
-    child_indent: int | None = None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or line.lstrip().startswith("#"):
-            continue
-
-        indent = len(line) - len(line.lstrip())
-        if indent == 0:
-            try:
-                inside = _parse_yaml_scalar(line.split(":", 1)[0], 0) == key
-            except ValueError:
-                inside = False
-            child_indent = None
-            continue
-        if not inside:
-            continue
-        if child_indent is None:
-            child_indent = indent
-        if indent < child_indent:
-            inside = False
-            child_indent = None
-        elif include_nested and lines and (
-            indent > child_indent or stripped == "-" or stripped.startswith("- ")
-        ):
-            lines[-1] += "\n" + line[child_indent:]
-        elif indent == child_indent:
-            lines.append(stripped)
-    return lines
+def omp_extension_paths(data: dict[str, object]) -> list[str]:
+    """String entries under top-level ``extensions:``; non-list/non-string entries ignored."""
+    extensions = data.get("extensions")
+    if not isinstance(extensions, list):
+        return []
+    return [entry for entry in extensions if isinstance(entry, str)]
 
 
-def _yaml_without_comment(raw: str) -> str:
-    quote: str | None = None
-    index = 0
-    while index < len(raw):
-        char = raw[index]
-        if quote == "'":
-            if char == "'":
-                if index + 1 < len(raw) and raw[index + 1] == "'":
-                    index += 2
-                    continue
-                quote = None
-        elif quote == '"':
-            if char == "\\":
-                index += 2
-                continue
-            if char == '"':
-                quote = None
-        elif char in {"'", '"'}:
-            quote = char
-        elif char == "#" and (index == 0 or raw[index - 1].isspace()):
-            return raw[:index].rstrip()
-        index += 1
-    return raw.strip()
+def omp_config_drift(data: dict[str, object]) -> list[str]:
+    """Contract settings missing from a parsed OMP agent config; empty when compliant.
 
-
-def _omp_contract_line_matches(line: str, marker: str) -> bool:
-    expected_key, separator, expected_raw = marker.partition(":")
-    if not separator:
-        return marker in line
-
-    actual_key, separator, _ = line.partition(":")
-    if not separator:
-        return False
-    try:
-        if _parse_yaml_scalar(actual_key, 0) != expected_key.strip():
-            return False
-        expected = _parse_yaml_scalar(expected_raw, 0)
-        actual = _parse_yaml_config(line).get(expected_key.strip())
-    except ValueError:
-        return False
-    return type(actual) is type(expected) and actual == expected
-
-
-def omp_config_drift(text: str) -> list[str]:
-    """Contract settings missing from an OMP agent config; empty when compliant."""
-    return [
-        f"{block}.{marker}"
-        for block, marker in OMP_AGENT_CONFIG_CONTRACT
-        if not any(
-            _omp_contract_line_matches(line, marker)
-            for line in omp_config_block(text, block, include_nested=True)
-        )
-    ]
+    Values must match with the same YAML type: ``enableClaudeUser: 1`` is drift."""
+    missing: list[str] = []
+    for block, key, expected in OMP_AGENT_CONFIG_CONTRACT:
+        section = data.get(block)
+        actual = section.get(key) if isinstance(section, dict) else None
+        if type(actual) is not type(expected) or actual != expected:
+            missing.append(f"{block}.{key}")
+    hooks = omp_extension_paths(data)
+    missing.extend(
+        f"extensions.{name}" for name in OMP_HOOK_FILES
+        if not any(entry.endswith(f"/{name}") for entry in hooks)
+    )
+    return missing
 
 
 def _find_omp_hooks_dir() -> Path | None:
@@ -865,7 +642,7 @@ def _find_omp_hooks_dir() -> Path | None:
         roots.extend(base.parents)
     for root in roots:
         hooks_dir = root / "omp" / "hooks"
-        if all((hooks_dir / name).is_file() for name in _OMP_HOOK_FILES):
+        if all((hooks_dir / name).is_file() for name in OMP_HOOK_FILES):
             return hooks_dir
     return None
 
@@ -880,7 +657,7 @@ def converge_omp_agent_config(*, dry_run: bool) -> bool:
                 "not seeding a config the doctor would fail"
             )
             return False
-        hook_lines = "\n".join(f"  - {hooks_dir / name}" for name in _OMP_HOOK_FILES)
+        hook_lines = "\n".join(f"  - {hooks_dir / name}" for name in OMP_HOOK_FILES)
         extensions = f"extensions:\n{hook_lines}\n"
         content = _OMP_AGENT_CONFIG_TEMPLATE.format(extensions=extensions)
         if not _write_atomic_text(path, content, dry_run=dry_run):
@@ -890,8 +667,11 @@ def converge_omp_agent_config(*, dry_run: bool) -> bool:
         return True
 
     # Existing config is user-owned YAML; OMP convergence is deliberately read-only.
-    # Verify the contract markers and report drift instead of rewriting syntax/comments.
-    missing = omp_config_drift(path.read_text(encoding="utf-8"))
+    # Verify the contract and report drift instead of rewriting syntax/comments.
+    data = load_yaml_object(path)
+    if data is None:
+        return False
+    missing = omp_config_drift(data)
     if not missing:
         skip(f"{path}: agent config matches stack contract")
         return True

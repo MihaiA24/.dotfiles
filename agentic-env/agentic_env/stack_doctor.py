@@ -56,7 +56,7 @@ def _check_binary(name: str, *, fix: str, mandatory: bool) -> Check:
 
 
 def _mcp_servers(path: Path) -> tuple[dict[str, object], list[object]] | None:
-    data = cfg._load_json_object(path)
+    data = cfg.load_json_object(path)
     if data is None:
         return None
     servers = data.get("mcpServers")
@@ -92,7 +92,7 @@ def _check_omp_mcp(path: Path) -> list[Check]:
     checks = []
     for name in cfg.OMP_GATED_SERVERS:
         entry = f"mcpServers.{name}"
-        drift = cfg._mcp_entry_drift(servers[name], cfg.MCP_SERVERS[name]) if name in servers else ""
+        drift = cfg.mcp_entry_drift(servers[name], cfg.MCP_SERVERS[name]) if name in servers else ""
         checks.append(
             Check(
                 f"{label}: {name} wired + gated",
@@ -176,18 +176,20 @@ def _check_agent_config() -> list[Check]:
     path = cfg.OMP_AGENT_CONFIG_PATH
     if not path.exists():
         return [Check("~/.omp/agent/config.yml present", False, "missing", FIX_CONFIGURE)]
-    text = path.read_text(encoding="utf-8")
-    missing = cfg.omp_config_drift(text)
+    data = cfg.load_yaml_object(path)
+    if data is None:
+        return [Check("config.yml stack contract", False, "unreadable YAML", "fix ~/.omp/agent/config.yml by hand")]
+    missing = cfg.omp_config_drift(data)
     checks = [
         Check(
             "config.yml stack contract",
             not missing,
-            ", ".join(missing) if missing else f"{len(cfg.OMP_AGENT_CONFIG_CONTRACT)} settings",
+            ", ".join(missing) if missing else f"{len(cfg.OMP_AGENT_CONFIG_CONTRACT) + len(cfg.OMP_HOOK_FILES)} settings",
             "merge DECISIONS_AI_TOOLING.md 'Live wiring' into ~/.omp/agent/config.yml",
         )
     ]
-    extensions = [line.lstrip("- ").strip() for line in cfg.omp_config_block(text, "extensions")]
-    for hook in cfg._OMP_HOOK_FILES:
+    extensions = cfg.omp_extension_paths(data)
+    for hook in cfg.OMP_HOOK_FILES:
         paths = [Path(entry) for entry in extensions if entry.endswith(f"/{hook}")]
         if len(paths) != 1:
             detail = "not registered" if not paths else f"registered {len(paths)}x"
@@ -240,7 +242,7 @@ def _check_hermes() -> list[Check]:
     if not path.exists():
         return [Check("~/.hermes/config.yaml present", False, "missing", FIX_CONFIGURE, mandatory=False)]
     label = _short(path)
-    data = cfg._HermesConfigAdapter(path)._read()
+    data = cfg.load_yaml_object(path)
     if data is None:
         return [Check(f"{label} parsed", False, "unreadable YAML", f"fix {label} by hand", mandatory=False)]
     entries = data.get("mcp_servers")
@@ -254,7 +256,7 @@ def _check_hermes() -> list[Check]:
         for server in cfg.MCP_SERVERS.values():
             entry = f"mcp_servers.{server.name}"
             present = isinstance(entries, dict) and server.name in entries
-            drift = cfg._mcp_entry_drift(entries[server.name], server) if present else "missing"
+            drift = cfg.mcp_entry_drift(entries[server.name], server) if present else "missing"
             checks.append(Check(
                 f"hermes {entry}", not drift, drift or "configured",
                 f"fix {entry} in {label} by hand" if present and drift else FIX_CONFIGURE,
@@ -263,16 +265,21 @@ def _check_hermes() -> list[Check]:
 
     memory = data.get("memory")
     for server in cfg.MCP_SERVERS.values():
-        if not server.hermes_memory_provider:
+        want = server.hermes_memory_provider
+        if not want:
             continue
-        provider = memory.get("provider") if isinstance(memory, dict) else None
-        missing = memory is None or isinstance(memory, dict) and provider is None
+        if memory is not None and not isinstance(memory, dict):
+            checks.append(Check(
+                "hermes memory.provider", False, "memory must be an object",
+                f"fix memory in {label} by hand", mandatory=False,
+            ))
+            continue
+        provider = memory.get("provider") if memory else None
         checks.append(Check(
             "hermes memory.provider",
-            isinstance(memory, dict) and provider == server.hermes_memory_provider,
-            f"{provider!r}; expected {server.hermes_memory_provider!r}" if missing or isinstance(memory, dict)
-            else "memory must be an object",
-            FIX_CONFIGURE if missing else f"fix memory.provider in {label} by hand",
+            provider == want,
+            want if provider == want else f"{provider!r}; expected {want!r}",
+            FIX_CONFIGURE if provider is None else f"fix memory.provider in {label} by hand",
             mandatory=False,
         ))
     stale = isinstance(entries, dict) and "lean-ctx" in entries

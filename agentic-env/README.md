@@ -37,7 +37,7 @@ Docs:
 - `agentic-configure-agent-mcps`
   - Adds selected project-memory MCP servers when missing:
     - Hermes: `codebase-memory-mcp` and `agentmemory`
-      - Accepts scalar block lists, including Hermes/PyYAML's indentless style. List mappings, nested lists, and unsupported list syntax are rejected without writing. When entries are added, the writer preserves scalar types and empty mappings but normalizes formatting and drops comments.
+      - `~/.hermes/config.yaml` is parsed with PyYAML (the same library Hermes writes it with); malformed YAML or a non-mapping root is rejected without writing. When entries are added, the file is re-serialized: scalar types and structure are preserved, formatting is normalized and comments are dropped (a `.agentic-env.bak` copy is kept).
     - OMP: `codebase-memory-mcp` only, written gated (kept in `disabledServers`, enable per session); `agentmemory` and `lean-ctx` are excluded — stale entries are removed and both names stay in `disabledServers` so OMP's `~/.claude.json` import cannot mount them (ADR-0006/ADR-0009)
   - Existing selected MCP entries are validated, not repaired: a mismatched command, arguments, or Hermes memory provider is reported for manual correction and fails configuration without rewriting that file. Missing entries are added only when the file is otherwise valid; unrelated settings are preserved.
   - Adds matching global skills, with the same OMP exclusions.
@@ -96,6 +96,8 @@ uv run python -m agentic_env.configure_agent_mcps
 uv run python -m agentic_env.update_agentic_stack
 uv run python -m agentic_env.stack_doctor
 ```
+
+Unit tests: `uv run pytest -q` (pytest comes from the `dev` dependency group in `pyproject.toml`).
 
 ### Update policy
 
@@ -321,9 +323,8 @@ The run is successful only if all checks pass:
 
 ## Design and tradeoffs
 - **Container bases:** `node:20-bookworm-slim` for the Debian baseline and official `archlinux:base` for rolling Arch x86_64; macOS acceptance executes natively.
-- **Measured image size:** about **329MB** for `agentic-env-fresh-install` on the earlier `bullseye-slim` base; not re-measured after the bookworm switch.
 - `.dockerignore` in `agentic-env/` trims compose build context for faster local/CI builds.
 - `node:20-bullseye-slim` was the original minimum; the image moved to `bookworm-slim` in `b49fa8f` when it gained `xz-utils`/`libatomic1`/`unzip` for Hermes' Node 26 + bun runtime (ADR-0001 records the bullseye-era measurements).
 - `alpine` images were rejected due installer/runtime incompatibilities (`omp`/Hermes path).
 ## Dependencies
-- `rich` is required and is installed automatically as a package dependency.
+- `rich` and `pyyaml` are required and are installed automatically as package dependencies.

@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
+
 from agentic_env import configure_agent_mcps
 from agentic_env.stack_metadata import AGENTMEMORY_VERSION
 
@@ -34,37 +36,6 @@ class ConfigureAgentMcpsTests(unittest.TestCase):
             assert configure_agent_mcps._install_skill(root, skill, dry_run=False) is True
             assert skill_path.read_text(encoding="utf-8") == skill.body.rstrip() + "\n"
 
-    def test_parse_yaml_roundtrip_and_scalar_types(self) -> None:
-        raw = """mcp_servers:
-  codebase-memory-mcp:
-    command: codebase-memory-mcp
-  agentmemory:
-    command: npx
-    args: [\"-y\", \"@agentmemory/mcp\"]
-memory:
-  provider: agentmemory
-flags: [\"-a\", \"-b\"]
-enabled: true
-count: 3
-pi: 3.14
-nullish: null
-"""
-        parsed = configure_agent_mcps._parse_yaml_config(raw)
-
-        self.assertEqual(
-            parsed["mcp_servers"]["agentmemory"],
-            {"command": "npx", "args": ["-y", "@agentmemory/mcp"]},
-        )
-        self.assertEqual(parsed["memory"]["provider"], "agentmemory")
-        self.assertEqual(parsed["flags"], ["-a", "-b"])
-        self.assertEqual(parsed["enabled"], True)
-        self.assertEqual(parsed["count"], 3)
-        self.assertAlmostEqual(parsed["pi"], 3.14)
-        self.assertIsNone(parsed["nullish"])
-
-        dumped = configure_agent_mcps._dump_yaml_config(parsed)
-        self.assertEqual(configure_agent_mcps._parse_yaml_config(dumped), parsed)
-
     def test_configure_hermes_is_idempotent_when_already_compliant(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "config.yaml"
@@ -84,7 +55,7 @@ memory:
             path.write_text(original, encoding="utf-8")
             with patch(
                 "agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER",
-                configure_agent_mcps._HermesConfigAdapter(path=path),
+                configure_agent_mcps.HermesConfigAdapter(path=path),
             ):
                 for dry_run in (False, True):
                     self.assertTrue(configure_agent_mcps.configure_hermes(
@@ -105,13 +76,13 @@ memory:
             )
             with patch(
                 "agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER",
-                configure_agent_mcps._HermesConfigAdapter(path=path),
+                configure_agent_mcps.HermesConfigAdapter(path=path),
             ):
                 assert configure_agent_mcps.configure_hermes(
                     [configure_agent_mcps.MCP_SERVERS["agentmemory"]],
                     dry_run=False,
                 )
-            parsed = configure_agent_mcps._parse_yaml_config(path.read_text(encoding="utf-8"))
+            parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
             self.assertEqual(parsed["mcp_servers"]["agentmemory"]["command"], "npx")
             self.assertEqual(
                 parsed["mcp_servers"]["agentmemory"]["args"],
@@ -123,7 +94,7 @@ memory:
         server = configure_agent_mcps.MCP_SERVERS["codebase-memory-mcp"]
         missing = configure_agent_mcps.McpServer("missing", "missing-mcp")
         for agent, key, adapter_type in (
-            ("hermes", "mcp_servers", configure_agent_mcps._HermesConfigAdapter),
+            ("hermes", "mcp_servers", configure_agent_mcps.HermesConfigAdapter),
             ("omp", "mcpServers", configure_agent_mcps._OmpConfigAdapter),
         ):
             for entry in (
@@ -136,7 +107,7 @@ memory:
                     path = Path(temp_dir) / "config"
                     data = {key: {server.name: entry}, "user_option": "keep"}
                     original = (
-                        configure_agent_mcps._dump_yaml_config(data) + "\n"
+                        yaml.safe_dump(data, sort_keys=False)
                         if agent == "hermes" else json.dumps(data, indent=4) + "\n"
                     ).encode()
                     path.write_bytes(original)
@@ -168,7 +139,7 @@ memory:
 """
             path.write_bytes(original)
             with (
-                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps._HermesConfigAdapter(path)),
+                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps.HermesConfigAdapter(path)),
                 patch("agentic_env.configure_agent_mcps.warn_missing_commands"),
                 patch("agentic_env.configure_agent_mcps.warn") as warn,
             ):
@@ -187,7 +158,7 @@ memory:
             original = b"memory:\n  provider: user-memory\n  custom: keep\n"
             path.write_bytes(original)
             with (
-                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps._HermesConfigAdapter(path)),
+                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps.HermesConfigAdapter(path)),
                 patch("agentic_env.configure_agent_mcps.warn") as warn,
             ):
                 self.assertFalse(configure_agent_mcps.configure_hermes(
@@ -203,7 +174,7 @@ memory:
             hermes = Path(temp_dir) / "hermes.yaml"
             omp = Path(temp_dir) / "omp.json"
             with (
-                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps._HermesConfigAdapter(hermes)),
+                patch("agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER", configure_agent_mcps.HermesConfigAdapter(hermes)),
                 patch("agentic_env.configure_agent_mcps._OMP_CONFIG_ADAPTERS", [configure_agent_mcps._OmpConfigAdapter(omp)]),
             ):
                 for configure, path in ((configure_agent_mcps.configure_hermes, hermes), (configure_agent_mcps.configure_omp, omp)):
@@ -217,7 +188,7 @@ memory:
 
     def test_hermes_validation_checks_definitions_and_provider(self) -> None:
         server = configure_agent_mcps.MCP_SERVERS["agentmemory"]
-        adapter = configure_agent_mcps._HermesConfigAdapter(Path("unused.yaml"))
+        adapter = configure_agent_mcps.HermesConfigAdapter(Path("unused.yaml"))
         data = {
             "mcp_servers": {
                 "agentmemory": {
@@ -240,7 +211,7 @@ memory:
         conflict = {**data, "memory": {"provider": "user-memory"}}
         self.assertFalse(adapter.validate(conflict, [server], required_provider="agentmemory"))
 
-    def test_configure_hermes_preserves_scalar_block_lists(self) -> None:
+    def test_configure_hermes_preserves_user_yaml_structures(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "config.yaml"
             path.write_text(
@@ -261,6 +232,10 @@ mcp_servers:
     - 'it''s quoted'
     - "line\\nfeed # literal"  # trailing comment
     transport: stdio
+    jobs:
+      - name: user-owned
+        prompt: |
+          Keep my config
 discord:
   allowed_channels:
   - "guild:channel"
@@ -281,16 +256,14 @@ known_plugin_toolsets:
             )
             with patch(
                 "agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER",
-                configure_agent_mcps._HermesConfigAdapter(path=path),
+                configure_agent_mcps.HermesConfigAdapter(path=path),
             ):
                 assert configure_agent_mcps.configure_hermes(
                     [configure_agent_mcps.MCP_SERVERS["agentmemory"]],
                     dry_run=False,
                 )
 
-            parsed = configure_agent_mcps._parse_yaml_config(
-                path.read_text(encoding="utf-8")
-            )
+            parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
             self.assertEqual(parsed["toolsets"], ["hermes-cli", "terminal"])
             self.assertEqual(
                 parsed["platform_toolsets"],
@@ -307,6 +280,7 @@ known_plugin_toolsets:
                         "line\nfeed # literal",
                     ],
                     "transport": "stdio",
+                    "jobs": [{"name": "user-owned", "prompt": "Keep my config\n"}],
                 },
             )
             self.assertEqual(
@@ -324,52 +298,17 @@ known_plugin_toolsets:
             self.assertIsNone(parsed["gateway"])
 
     def test_configure_hermes_rejects_malformed_yaml_without_writing(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "config.yaml"
-            original = "mcp_servers: [\n"
-            path.write_text(original, encoding="utf-8")
-            with patch(
-                "agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER",
-                configure_agent_mcps._HermesConfigAdapter(path=path),
-            ):
-                self.assertFalse(
-                    configure_agent_mcps.configure_hermes(
-                        [configure_agent_mcps.MCP_SERVERS["codebase-memory-mcp"]],
-                        dry_run=False,
-                    )
-                )
-            self.assertEqual(path.read_text(encoding="utf-8"), original)
-
-    def test_configure_hermes_rejects_non_scalar_block_lists_without_writing(
-        self,
-    ) -> None:
-        originals = (
-            """toolsets:
-- name: hermes-cli
-""",
-            """toolsets:
-  - hermes-cli
-  unexpected: mapping
-""",
-        )
-        for original in originals:
-            with (
-                self.subTest(original=original),
-                tempfile.TemporaryDirectory() as temp_dir,
-            ):
+        for original in ("mcp_servers: [\n", "toolsets:\n  - hermes-cli\n  unexpected: mapping\n"):
+            with self.subTest(original=original), tempfile.TemporaryDirectory() as temp_dir:
                 path = Path(temp_dir) / "config.yaml"
                 path.write_text(original, encoding="utf-8")
                 with patch(
                     "agentic_env.configure_agent_mcps._HERMES_CONFIG_ADAPTER",
-                    configure_agent_mcps._HermesConfigAdapter(path=path),
+                    configure_agent_mcps.HermesConfigAdapter(path=path),
                 ):
                     self.assertFalse(
                         configure_agent_mcps.configure_hermes(
-                            [
-                                configure_agent_mcps.MCP_SERVERS[
-                                    "codebase-memory-mcp"
-                                ]
-                            ],
+                            [configure_agent_mcps.MCP_SERVERS["codebase-memory-mcp"]],
                             dry_run=False,
                         )
                     )
@@ -456,7 +395,7 @@ known_plugin_toolsets:
             dotfiles = Path(temp_dir) / "dotfiles"
             hooks = dotfiles / "omp" / "hooks"
             hooks.mkdir(parents=True)
-            for name in configure_agent_mcps._OMP_HOOK_FILES:
+            for name in configure_agent_mcps.OMP_HOOK_FILES:
                 (hooks / name).write_text("// hook\n", encoding="utf-8")
             config_path = Path(temp_dir) / "config.yml"
             with (
@@ -470,7 +409,7 @@ known_plugin_toolsets:
             ):
                 assert configure_agent_mcps.converge_omp_agent_config(dry_run=False)
             text = config_path.read_text(encoding="utf-8")
-            self.assertEqual(configure_agent_mcps.omp_config_drift(text), [])
+            self.assertEqual(configure_agent_mcps.omp_config_drift(yaml.safe_load(text)), [])
             self.assertIn(str(hooks / "retention-canary.ts"), text)
 
     def test_converge_omp_agent_config_finds_hooks_in_home_dotfiles(self) -> None:
@@ -478,7 +417,7 @@ known_plugin_toolsets:
             home = Path(temp_dir) / "home"
             hooks = home / ".dotfiles" / "omp" / "hooks"
             hooks.mkdir(parents=True)
-            for name in configure_agent_mcps._OMP_HOOK_FILES:
+            for name in configure_agent_mcps.OMP_HOOK_FILES:
                 (hooks / name).write_text("// hook\n", encoding="utf-8")
             config_path = Path(temp_dir) / "config.yml"
             with (
@@ -489,7 +428,7 @@ known_plugin_toolsets:
             ):
                 assert configure_agent_mcps.converge_omp_agent_config(dry_run=False)
             text = config_path.read_text(encoding="utf-8")
-            self.assertEqual(configure_agent_mcps.omp_config_drift(text), [])
+            self.assertEqual(configure_agent_mcps.omp_config_drift(yaml.safe_load(text)), [])
             self.assertIn(str(hooks / "verification-recorder.ts"), text)
 
     def test_converge_omp_agent_config_refuses_to_seed_without_hooks(self) -> None:
@@ -521,7 +460,7 @@ known_plugin_toolsets:
             ):
                 assert configure_agent_mcps.converge_omp_agent_config(dry_run=False)
             mock_warn.assert_called_once()
-            self.assertIn("compaction.thresholdTokens: 150000", mock_warn.call_args[0][0])
+            self.assertIn("compaction.thresholdTokens", mock_warn.call_args[0][0])
             self.assertEqual(config_path.read_text(encoding="utf-8"), original)
 
     def test_install_skills_omits_agentmemory_on_omp(self) -> None:

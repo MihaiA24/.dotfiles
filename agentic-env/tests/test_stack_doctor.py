@@ -31,13 +31,13 @@ class _Host:
         self.hermes_skills = root / "hermes" / "skills"
         hooks = root / "hooks"
         hooks.mkdir()
-        for name in configure_agent_mcps._OMP_HOOK_FILES:
+        for name in configure_agent_mcps.OMP_HOOK_FILES:
             (hooks / name).write_text("// hook\n", encoding="utf-8")
         for path in self.mcp_paths:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.write_mcp(path, gated=True)
         extensions = "extensions:\n" + "".join(
-            f"  - {hooks / name}\n" for name in configure_agent_mcps._OMP_HOOK_FILES
+            f"  - {hooks / name}\n" for name in configure_agent_mcps.OMP_HOOK_FILES
         )
         self.agent_config.write_text(
             configure_agent_mcps._OMP_AGENT_CONFIG_TEMPLATE.format(extensions=extensions),
@@ -197,7 +197,7 @@ class StackDoctorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             host = _Host(Path(temp_dir))
             template = host.agent_config.read_text(encoding="utf-8")
-            # An unrelated valid YAML mapping list must not be fed to the limited Hermes parser.
+            # Unrelated user-owned YAML structures must be tolerated, not rejected.
             template += "custom:\n  jobs:\n    - name: user-owned\n      prompt: |\n        Keep my config\n"
             for replacement, compliant in cases:
                 with self.subTest(replacement=replacement):
