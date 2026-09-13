@@ -3,6 +3,7 @@
 This folder packages commands that provision and update a local multi-agent tooling stack.
 
 Docs:
+- [Stack overview](docs/stack-overview.md) – plain-language summary of what the stack is, why each layer was chosen, what is pinned, and what would change it.
 - [Project memory stack](docs/project-memory-stack.md) – guide and one-repo template for `codebase-memory-mcp`, `agentmemory`, `CONTEXT.md`, and ADR usage.
 - [Decisions](DECISIONS_AI_TOOLING.md) – the operative stack contract, one section per layer (Decided → Why → Rejected → Revisit → Wiring); `lean-ctx` was removed stack-wide (ADR-0009).
 
