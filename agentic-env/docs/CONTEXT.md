@@ -21,6 +21,10 @@
   - A supported host being provisioned from scratch, with no prior agent-stack installation or agent-specific configuration. It is the target of a fresh install, independent of any existing workstation’s installed tools or configuration.
   - _Avoid_: Fresh machine (unqualified), blank VM
 
+- **Native host acceptance**
+  - Verification of clean provisioning on the target host's own operating system and kernel, with acceptance state isolated from any existing agent stack. This is distinct from distro-container evidence, which exercises a container's userland on its host's kernel.
+  - _Avoid_: Container acceptance, existing-stack health check
+
 - **Machine provisioning**
   - The product boundary of `agentic-env`: install, configure, update, and diagnose the user-level agent stack. Repository initialization, indexing, project-memory maintenance, uninstall, and rollback remain outside the product boundary. Agent hook files are diagnosed but never written; the tools that install them own them.
   - _Avoid_: Project onboarding, project lifecycle management
