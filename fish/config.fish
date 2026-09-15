@@ -21,8 +21,8 @@ end
 if not set -q SSH_AUTH_SOCK; or not ssh-add -l >/dev/null 2>&1
     # Start new agent and save info
     ssh-agent -c > $agent_file
-    source $agent_file
-    ssh-add  # This will ask for passphrase once
+    source $agent_file >/dev/null 2>&1
+    if status is-interactive; ssh-add; end  # This will ask for passphrase once
 end
 
 # >>> conda initialize >>>
