@@ -55,7 +55,6 @@ class SkillPack:
     name: str
     source: str
     label: str
-    aliases: tuple[str, ...]
     skills: tuple[str, ...]
 
 
@@ -207,7 +206,6 @@ def _parse_skill_pack_config(payload: object, path: Path) -> SkillManifest | Non
             name=canonical_name,
             source=source_value,
             label=label_value,
-            aliases=tuple(_collect_unique(raw_aliases)),
             skills=tuple(skill_values),
         )
 
@@ -537,27 +535,21 @@ def _install_skills(
         warn("No target agents selected for skill installation")
         return False
 
-    for pack in skill_packs:
-        source = manifest.source(pack)
-        configured_skills = list(manifest.packs[pack].skills)
-
-        if configured_skills:
+    for name in skill_packs:
+        pack = manifest.packs[name]
+        if pack.skills:
             if requested_skills:
-                filtered_skills = [
-                    skill for skill in requested_skills if skill in configured_skills
-                ]
+                filtered_skills = [skill for skill in requested_skills if skill in pack.skills]
                 if not filtered_skills:
-                    warn(
-                        f"{manifest.packs[pack].label}: no requested skills matched this pack's filter; skipped"
-                    )
+                    warn(f"{pack.label}: no requested skills matched this pack's filter; skipped")
                     continue
             else:
-                filtered_skills = configured_skills
+                filtered_skills = list(pack.skills)
         else:
             filtered_skills = requested_skills
 
-        if not _install_skill_package(source, filtered_skills, skill_agents):
-            warn(f"{manifest.packs[pack].label}: installation failed")
+        if not _install_skill_package(manifest.source(name), filtered_skills, skill_agents):
+            warn(f"{pack.label}: installation failed")
             return False
     return True
 
