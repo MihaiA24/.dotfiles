@@ -23,4 +23,8 @@ agentic-stack-doctor = "agentic_env.stack_doctor:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["agentic_env"]
-artifacts = ["agentic_env/skill-packs.json", "agentic_env/skill_bodies/*.md"]
+artifacts = [
+  "agentic_env/skill-packs.json",
+  "agentic_env/skill_bodies/*.md",
+  "agentic_env/vendored/**",
+]

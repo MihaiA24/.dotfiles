@@ -46,18 +46,18 @@ agentmemory is rejected on OMP (0 calls in 934 sessions; ADR-0006 single memory 
 
 Installed and registered on both OMP roots but disabled by default: it costs answer quality and about 10× tokens on ordinary tasks. Enable per session when the task needs more than ten native calls, crosses repository boundaries, or aggregates the whole graph. That litmus has fired zero times since August 2026; if it stays at zero by 2026-10-01 the server comes off the OMP roots (still installed for per-project mounting).
 
-### Skills — 25, fit-curated
+### Skills — 32, fit-curated by job
 
-One skill store on disk, symlinked into every agent, loaded by OMP once through the Claude root.
+One skill store on disk, symlinked into every agent, loaded by OMP once through the Claude root. Each installed skill is **Core** (named in a recipe's default step) or an **Escalation** (runs only on its trigger); the roster table with triggers and work products, the six recipes A–F, and every **Excluded** skill with its reopen condition live in [`DECISIONS_AI_TOOLING.md` §6](../DECISIONS_AI_TOOLING.md).
 
-- **mattpocock spine (13):** wayfinder, grill-with-docs, grilling, domain-modeling, research, prototype, implement, tdd, code-review, teach, handoff, resolving-merge-conflicts, diagnosing-bugs.
+- **mattpocock (15):** wayfinder, grill-with-docs, grilling, domain-modeling, codebase-design, tdd, diagnosing-bugs, code-review (core); research, prototype, to-spec, to-tickets, resolving-merge-conflicts, handoff, teach (escalations).
 - **ponytail (6):** anti-over-engineering mode plus audit, debt, gain, help, review. Force-injected; measured −10.3% cost.
 - **caveman (2):** terse output on demand; measured −8.5%. Pinned to the benchmarked v2.3.1 text.
-- **pstack picks (4):** create-verification-skill, show-me-your-work, reflect, recall (manual-only forensic tool).
+- **pstack (9, vendored):** how (core for "how does X work"); why, blast-radius, interrogate, unslop, create-verification-skill, show-me-your-work, reflect, recall (escalations). All `/`-only by upstream design.
 
-Skills are adopted on workflow fit as judged by the user; usage audits only flag stale or duplicate skills for re-review. Rejected: pstack's style cluster (duplicates ponytail/caveman and would double prompt weight), blast-radius and swarm (OMP subagents already do this), grill-me (grill-with-docs is a superset), to-spec and to-tickets (one use each in five months).
+Skills are adopted on fit for a named job as judged by the user; usage history is a diagnostic footnote. Review standards for `code-review`'s Standards axis: [`CODING_STANDARDS.md`](../CODING_STANDARDS.md). Notable exclusions: `implement` (its pre-commit review silently omits WIP), `architect`/`arena` (reopen for a genuinely new module shape), `swarm` (OMP fan-out covers it), pstack `tdd`/`teach` (name collisions with the Pocock skills that hold the job), the `principle-*` skills (condensed into the standards file).
 
-Host-independent selection review: [Matt Pocock + pstack for efficient development](skills-development-comparison.md). Compares all 84 skills, public reviews, and task-specific mixed workflows without using this host's installations or usage as selection criteria. It supersedes the selection ranking in the earlier [source and installation review](skills-fit-review.md); the roster and historical adoption decisions above remain unchanged.
+Selection evidence: [Matt Pocock + pstack for efficient development](skills-development-comparison.md) (per-job comparison of all 84 skills; where its recommendations differ from §6, §6 is operative) and the earlier [source and installation review](skills-fit-review.md) (historical).
 
 ### Hooks — two
 
@@ -79,7 +79,7 @@ Rejected: cadence-governor. Its verification nudges were followed 16.4% of the t
 | mattpocock/skills | v1.2.3 |
 | JuliusBrussee/caveman | v2.3.1 |
 | DietrichGebert/ponytail | v4.9.0 |
-| cursor/plugins (pstack) | unpinned — upstream publishes no tags |
+| cursor/plugins (pstack) | vendored copy at `c1c0a32` (2026-09-14), `agentic_env/vendored/pstack/UPSTREAM.md`; upstream publishes no tags (ADR-0010) |
 
 Remote install scripts are checksum-pinned; npm packages are version-pinned. Every remote reference must be pinned or carry a written reason for floating.
 

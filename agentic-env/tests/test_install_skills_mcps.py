@@ -105,6 +105,23 @@ class InstallSkillsMcpsTests(unittest.TestCase):
             skill_names = install_skills_mcps._parse_skill_names(["tdd,wayfinder", "tdd"])
             self.assertEqual(skill_names.selected, ("tdd", "wayfinder"))
 
+    def test_vendored_pack_skills_exist_at_resolved_source(self) -> None:
+        """A `./` source must resolve inside the package and carry every
+        roster skill; a bad re-copy would otherwise fail only at install time."""
+        self.assertTrue(
+            install_skills_mcps._load_skill_pack_config(install_skills_mcps._SKILL_PACK_CONFIG_PATH)
+        )
+        vendored = [
+            pack for pack in install_skills_mcps._SKILL_PACKS if pack.source.startswith("./")
+        ]
+        self.assertTrue(vendored)
+        for pack in vendored:
+            source = Path(install_skills_mcps._skill_pack_source(pack.name))
+            self.assertTrue(source.is_absolute())
+            self.assertTrue(source.is_relative_to(install_skills_mcps._SKILL_PACK_CONFIG_PATH.parent))
+            missing = [s for s in pack.skills if not (source / s / "SKILL.md").is_file()]
+            self.assertEqual(missing, [], f"{pack.name}: roster skills missing from {source}")
+
     @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
     @patch("agentic_env.install_skills_mcps._install_skills")
     @patch("agentic_env.install_skills_mcps._install_codebase_memory")

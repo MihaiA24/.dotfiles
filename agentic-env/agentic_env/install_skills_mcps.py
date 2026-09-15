@@ -288,7 +288,12 @@ def _all_skill_profiles() -> list[str]:
 
 
 def _skill_pack_source(name: str) -> str:
-    return _pack_lookup()[name].source
+    """Vendored packs use a `./` source relative to this package; the skills CLI
+    takes the absolute path. Anything else is an upstream ref passed through."""
+    source = _pack_lookup()[name].source
+    if source.startswith("./"):
+        return str(_SKILL_PACK_CONFIG_PATH.parent / source[2:])
+    return source
 
 
 def _skill_pack_label(name: str) -> str:

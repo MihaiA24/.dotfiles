@@ -17,11 +17,12 @@ Docs:
   - Installs:
     - mattpocock skills pack (global)
     - ponytail skill bundle (global, agent-dispatch)
+    - caveman and the vendored pstack skills (global)
     - `codebase-memory-mcp` (UI install supported)
     - `agentmemory` (CLI + Hermes MCP config)
   - Skill packs are driven by the bundled `agentic_env/skill-packs.json` default with:
-    - `packs` entries whose `source` is `owner/repo#<tag>` (pinned; `skills add` clones that tag) and which can define optional `skills` (array of specific skill names)
-      to install only those from that pack by default. `cursor/plugins` (pstack) publishes no tags and floats on `main`.
+    - `packs` entries whose `source` is `owner/repo#<tag>` (pinned; `skills add` clones that tag) or `./<dir>` (a copy vendored inside the package, installed as a local path; pstack lives at `agentic_env/vendored/pstack`, provenance in its `UPSTREAM.md`, ADR-0010). Each pack can define optional `skills` (array of specific skill names) to install only those from that pack by default.
+      The roster's roles, triggers and exclusions: `DECISIONS_AI_TOOLING.md` §6; review standards: `CODING_STANDARDS.md`.
     - `profiles` (named pack sets).
   - Supported options:
     - `--skill-pack` (comma-separated, repeated) to choose packs.

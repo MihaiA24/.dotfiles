@@ -2,6 +2,8 @@
 
 Reviewed 2026-09-13. **This comparison does not use this host's installations, invocation history, previous adoption decisions, or familiarity with either author.** It replaces the selection rationale in the earlier [host-oriented fit review](skills-fit-review.md), not that report's installation evidence. Nothing has been installed, removed, activated, or rewritten in either upstream skill pack.
 
+> Adjudicated 2026-09-15 (issue #42): the operative roster, roles, recipes and exclusions are `DECISIONS_AI_TOOLING.md` §6. Where this report and §6 differ (pstack `tdd`, `architect`, `swarm`, the `principle-*` skills), §6 is what is installed and why; the report stays as the evidence it was.
+
 ## Conclusion
 
 **Use Matt's skills to clarify intent, define domain language and testable interfaces, and separate specification review from code-quality review. Use pstack's skills to reconstruct system behavior, prove changes against reality, investigate downstream risk, and organize expensive parallel work when it earns its cost.** Neither collection deserves automatic ownership of the whole workflow.
