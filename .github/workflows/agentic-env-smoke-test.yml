@@ -14,7 +14,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: agentic-env
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run unit tests
+        run: uv run --frozen pytest -q
+
   agentic-smoke-test:
+    needs: unit
     name: Debian bookworm x86_64 clean install
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -38,6 +58,7 @@ jobs:
           docker exec -e SKIP_INSTALL=1 agentic-env-debian /bin/sh ./clean-acceptance.sh
 
   agentic-smoke-test-macos:
+    needs: unit
     name: Native macOS 15 Apple Silicon arm64 clean install
     runs-on: macos-15
     timeout-minutes: 45
@@ -84,6 +105,7 @@ jobs:
           SKIP_INSTALL=1 sh ./clean-acceptance.sh
 
   agentic-smoke-test-arch:
+    needs: unit
     name: Arch Linux x86_64 clean install (not CachyOS)
     runs-on: ubuntu-latest
     timeout-minutes: 45

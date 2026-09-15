@@ -257,7 +257,7 @@ Both Linux containers used the Ubuntu runner's `6.17.0-1022-azure` kernel; this 
 | macOS 15 arm64 | Native `macos-15` GitHub runner | Apple Silicon only |
 | Arch Linux x86_64 | Official `archlinux:base` container on Ubuntu | Arch-family proxy, not direct CachyOS verification |
 
-Push and pull-request triggers cover `agentic-env/**`, `omp/hooks/**`, and the workflow itself. `workflow_dispatch` remains available through **Actions → Agentic env smoke test → Run workflow**. Every job runs the same smoke contract twice: a fresh installation, then checks-only against that retained installation; a failed check fails its job.
+Push and pull-request triggers cover `agentic-env/**`, `omp/hooks/**`, and the workflow itself. `workflow_dispatch` remains available through **Actions → Agentic env smoke test → Run workflow**. A `unit` job (`uv run --frozen pytest -q` in `agentic-env/`) gates the three acceptance jobs: they are skipped when it fails (#38). Every acceptance job runs the same smoke contract twice: a fresh installation, then checks-only against that retained installation; a failed check fails its job.
 
 Prerequisites are prepared before provisioning: Python 3.12+, Node.js 20+/npm, uv, curl, git, CA certificates, shell/archive utilities, and C/C++ build tools. Arch uses `pacman -Syu` because it is rolling. Containers require Docker Engine and Compose with amd64 support (native or emulated). Native macOS requires working Command Line Tools/Xcode.
 
