@@ -159,6 +159,7 @@ Pre-registered triggers; nothing here is acted on without the trigger firing. Ea
 
 - oh-my-pi #8940 (retain-attempt telemetry) ships → retire the retention canary.
 - OMP major bump → re-verify converge keys against `settings-schema.ts` at the new tag, re-pin, re-run the docker smoke.
+- Hermes installer (2026-09-15, #39): fetched at commit `95d42656` of `NousResearch/hermes-agent` (the bytes reviewed 2026-09-02), never from the floating `hermes-agent.nousresearch.com/install.sh`, which drifted 2026-09-13 and turned every acceptance job red. Hermes pin bump → move `HERMES_INSTALL_COMMIT` alongside it and re-verify the SHA256. `omp.sh/install` and `claude.ai/install.sh` remain floating + hash-pinned; first drift → same treatment if the vendor publishes a versioned URL.
 - Canary fire-rate on 18.1.x → read at the next read-out; zero fires and #8940 still open = keep.
 - codebase-memory litmus 0× by **2026-10-01** → remove `codebase-memory-mcp` from the OMP roots (keep installed for per-project on-demand mounting). Upstream 0.10.8 available vs pin 0.9.0; bump only on promotion.
 - mattpocock `retro` ships → fit audit against pstack `reflect` (same job; keep one).

@@ -170,9 +170,29 @@ Skill-specific states, distinct from the component lifecycle states above: a com
   - Kept in the curated skill default because it fits the user's workflows: a fit judgment by the user, never a usage-count threshold. Usage audits are diagnostic — they flag stale or duplicate skills for re-review.
   - _Avoid_: Proven, validated
 
+- **Core (skill)**
+  - An adopted skill named in a recipe's default step for its job. Who invokes it (model or user) is a separate property: _Wired_.
+  - _Avoid_: Default, primary, spine
+
+- **Escalation (skill)**
+  - An adopted skill outside every recipe's default step; runs only when its named trigger fires, producing a stated work product. Distinct from _Gated_: gated is wired but off, escalation is on but not routed.
+  - _Avoid_: Optional, conditional, gated
+
+- **Excluded (skill)**
+  - A skill deliberately not installed, with the reason and the condition that reopens it.
+  - _Avoid_: Rejected (that is the component state), removed, pruned
+
 - **Skill store**
   - `~/.agents/skills` — the canonical copy of every installed skill. `skills add` writes here and symlinks `~/.claude/skills/<name>` and `~/.hermes/skills/<name>` into it; Codex reads it directly. OMP mounts it through `~/.claude/skills` (`enableClaudeUser`), never as its own root (`enableAgentsUser: false`), so each skill is loaded once.
   - _Avoid_: Recovery store, backup, archive
+
+- **Vendored pack**
+  - A skill pack whose installed source is a copy kept in this repository, carrying the upstream commit it was taken from and the upstream licence. Pinned by the copy, not by an upstream ref; a bump is a deliberate re-copy. Contrast: an upstream-pinned pack installs from the author's repository at a tag.
+  - _Avoid_: Fork, mirror, local pack
+
+- **Recipe**
+  - The per-job routing of skills for one kind of development task: which core skill runs, which escalations exist and what triggers them. Routing guidance, never a mandatory command chain.
+  - _Avoid_: Pipeline, workflow chain, mode
 
 ## Skill usage measurement
 
