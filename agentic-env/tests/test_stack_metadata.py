@@ -81,8 +81,8 @@ class StackMetadataTests(unittest.TestCase):
             update_agentic_stack.SKILLS_CLI_PACKAGE == stack_metadata.SKILLS_CLI_PACKAGE
         )
         assert (
-            update_agentic_stack.STACK_VERSION_FRAGMENTS
-            is stack_metadata.STACK_VERSION_FRAGMENTS
+            update_agentic_stack.STACK_VERSION_FLOORS
+            is stack_metadata.STACK_VERSION_FLOORS
         )
 
         assert (
@@ -113,12 +113,12 @@ class StackMetadataTests(unittest.TestCase):
                     ]
                 )
 
-    def test_update_skills_and_codex_converge_through_pinned_installers(self) -> None:
+    def test_update_pulls_latest_through_canonical_installers(self) -> None:
         with (
             patch("agentic_env.update_agentic_stack.cmd_exists", return_value=True),
             patch(
-                "agentic_env.update_agentic_stack.cmd_version_matches",
-                side_effect=[False, True],
+                "agentic_env.update_agentic_stack.cmd_version_at_least",
+                return_value=True,
             ),
             patch("agentic_env.update_agentic_stack.run") as run,
         ):
@@ -134,12 +134,12 @@ class StackMetadataTests(unittest.TestCase):
             ) as install,
         ):
             assert update_agentic_stack._update_codex() is True
-            install.assert_called_once_with(True)
+            install.assert_called_once_with(True, force=True)
 
-    def test_agent_installers_pass_immutable_upstream_refs(self) -> None:
+    def test_agent_installers_fetch_latest_except_pinned_hermes(self) -> None:
         with (
             patch(
-                "agentic_env.install_agents.cmd_version_matches",
+                "agentic_env.install_agents.cmd_version_at_least",
                 side_effect=[False, True],
             ),
             patch("agentic_env.install_agents.cmd_exists", return_value=False),
@@ -156,7 +156,7 @@ class StackMetadataTests(unittest.TestCase):
 
         with (
             patch(
-                "agentic_env.install_agents.cmd_version_matches",
+                "agentic_env.install_agents.cmd_version_at_least",
                 side_effect=[False, True],
             ),
             patch("agentic_env.install_agents.cmd_exists", return_value=False),
@@ -165,15 +165,11 @@ class StackMetadataTests(unittest.TestCase):
             ) as remote,
         ):
             assert install_agents._install_omp(True) is True
-            assert remote.call_args.kwargs["interpreter_args"] == [
-                "--binary",
-                "--ref",
-                stack_metadata.OMP_REF,
-            ]
+            assert remote.call_args.kwargs["interpreter_args"] == ["--binary"]
 
         with (
             patch(
-                "agentic_env.install_agents.cmd_version_matches",
+                "agentic_env.install_agents.cmd_version_at_least",
                 side_effect=[False, True],
             ),
             patch("agentic_env.install_agents.cmd_exists", return_value=False),
@@ -182,9 +178,7 @@ class StackMetadataTests(unittest.TestCase):
             ) as remote,
         ):
             assert install_agents._install_claude(True) is True
-            assert remote.call_args.kwargs["interpreter_args"] == [
-                stack_metadata.CLAUDE_VERSION
-            ]
+            assert remote.call_args.kwargs["interpreter_args"] == ["stable"]
 
     def test_release_archive_contract_covers_supported_hosts(self) -> None:
         platforms = {
