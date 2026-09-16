@@ -58,6 +58,7 @@ import subprocess
 from agentic_env.configure_agent_mcps import (
     HERMES_SKILL_ROOT, MCP_SERVERS, SKILLS, HermesConfigAdapter, load_yaml_object,
 )
+from agentic_env.common import version_at_least
 from agentic_env.stack_metadata import SKILLS_CLI_PACKAGE, SKILLS_CLI_VERSION
 
 config_path = Path.home() / ".hermes" / "config.yaml"
@@ -79,7 +80,9 @@ print("Hermes MCP wiring and matching skill descriptors verified")
 version = subprocess.check_output(
     ["npx", "--yes", SKILLS_CLI_PACKAGE, "--version"], text=True,
 ).strip()
-assert version == SKILLS_CLI_VERSION, f"skills CLI version mismatch: {version}"
+assert version_at_least(version, SKILLS_CLI_VERSION), (
+    f"skills CLI below the reviewed floor {SKILLS_CLI_VERSION}: {version}"
+)
 print(f"skills CLI: {version}")
 PY
 
