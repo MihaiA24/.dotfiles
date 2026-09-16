@@ -3,7 +3,8 @@
 Mandatory checks cover the OMP-primary layer (DECISIONS_AI_TOOLING.md "Live
 wiring"): any failure exits 1 and names the corrective command. Hermes (the
 other supported agent) only warns; Claude Code and Codex are installed agents
-(pinned CLI + skills, no managed config) and get a binary check only.
+(CLI + skills, no managed config) and get a binary check only. Binary checks
+are floors: at or above STACK_VERSION_FLOORS passes, below fails.
 Nothing is written.
 """
 

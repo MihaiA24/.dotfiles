@@ -323,6 +323,7 @@ The run is successful only if all checks pass:
    - `~/.hermes/config.yaml` contains the reviewed commands and arguments for `codebase-memory-mcp` and `agentmemory`, plus `memory.provider: agentmemory` (a stale `lean-ctx` entry is a doctor warning, not a smoke failure)
    - matching `codebase-memory-mcp`, `agentmemory`, and `ponytail` descriptors exist under `~/.hermes/skills`; missing descriptors fail smoke even though the doctor only warns
 7. The skills CLI reports a version at or above the reviewed floor through `npx --yes skills@latest --version`; fresh provisioning does not require a global `skills` binary.
+8. On Linux checks-only runs (`SKIP_INSTALL=1`), `agentic-update-stack` exits 0 against the already-provisioned HOME: every floating component reinstalls to the current latest and stays at or above its floor. Skipped on macOS so the shared runner IP does not make a second unauthenticated `api.github.com` request per run.
 
 ## Design and tradeoffs
 - **Container bases:** `node:20-bookworm-slim` for the Debian baseline and official `archlinux:base` for rolling Arch x86_64; macOS acceptance executes natively.
