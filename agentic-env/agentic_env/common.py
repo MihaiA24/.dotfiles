@@ -147,6 +147,8 @@ def choose(
         prompt,
         choices=rows,
         instruction="(↑↓ move · space toggle · a all · i invert · enter confirm)",
+        # prompt_toolkit's default renders checked rows in reverse video (white blocks).
+        style=questionary.Style([("selected", "noreverse fg:ansigreen"), ("highlighted", "bold")]),
     ).ask()
     if picked is None:
         raise SystemExit(130)
