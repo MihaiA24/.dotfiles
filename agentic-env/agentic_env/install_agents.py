@@ -7,6 +7,7 @@ import sys
 
 from .common import (
     ask,
+    choose,
     cmd_exists,
     cmd_version_at_least,
     info,
@@ -178,30 +179,23 @@ def main(argv: list[str] | None = None) -> int:
         ok("agentic-install-agents: remote contract check passed")
         return 0
 
+    rows = [
+        ("hermes", "Hermes Agent", True),
+        ("omp", "OMP / Oh My Pi", True),
+        ("codex", "OpenAI Codex CLI", True),
+        ("claude", "Claude Code", True),
+    ]
     if args.all:
-        do_all = True
+        picked = [value for value, _, _ in rows]
+    elif non_interactive:
+        picked = []
     else:
-        do_all = ask(
-            "Install all agent CLIs",
-            default=not non_interactive,
-            non_interactive=non_interactive,
-        )
+        picked = choose("Select agent CLIs to install", rows, non_interactive=False)
 
-    if do_all:
-        do_hermes = do_omp = do_codex = do_claude = True
-    else:
-        do_hermes = ask(
-            "Install Hermes Agent", default=False, non_interactive=non_interactive
-        )
-        do_omp = ask(
-            "Install OMP / Oh My Pi", default=False, non_interactive=non_interactive
-        )
-        do_codex = ask(
-            "Install OpenAI Codex CLI", default=False, non_interactive=non_interactive
-        )
-        do_claude = ask(
-            "Install Claude Code", default=False, non_interactive=non_interactive
-        )
+    do_hermes = "hermes" in picked
+    do_omp = "omp" in picked
+    do_codex = "codex" in picked
+    do_claude = "claude" in picked
 
     ok_all = True
     if do_hermes:

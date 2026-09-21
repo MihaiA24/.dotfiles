@@ -187,6 +187,60 @@ class InstallSkillsMcpsTests(unittest.TestCase):
 
         mock_configure_hermes.assert_called_once_with()
 
+    def test_resolve_pack_skills_intersects_rosters_and_passes_whole_packs(self) -> None:
+        manifest = install_skills_mcps.SkillManifest(
+            packs={
+                "rostered": install_skills_mcps.SkillPack(
+                    "rostered", "owner/rostered#v1", "rostered skills", ("tdd", "grilling")
+                ),
+                "open": install_skills_mcps.SkillPack(
+                    "open", "owner/open#v1", "open skills", ()
+                ),
+            },
+            aliases={},
+            profiles={},
+        )
+        resolve = install_skills_mcps._resolve_pack_skills
+
+        self.assertEqual(
+            resolve(manifest, ["rostered", "open"], ["tdd"]),
+            {"rostered": ["tdd"], "open": ["tdd"]},
+        )
+        self.assertEqual(resolve(manifest, ["rostered"], ["absent"]), {})
+        self.assertEqual(
+            resolve(manifest, ["rostered", "open"], []),
+            {"rostered": ["tdd", "grilling"], "open": []},
+        )
+
+    @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    @patch("agentic_env.install_skills_mcps.ask", return_value=True)
+    @patch("agentic_env.install_skills_mcps.choose")
+    def test_guided_main_installs_only_picked_skills_and_mcps(
+        self,
+        mock_choose,
+        _mock_ask,
+        mock_install_agentmemory,
+        mock_install_codebase_memory,
+        mock_install_skills,
+        _mock_validate_remote_contract,
+    ) -> None:
+        mock_choose.side_effect = [
+            ["claude"],
+            ["mattpocock/tdd", "ponytail/ponytail"],
+            ["agentmemory"],
+        ]
+
+        self.assertEqual(install_skills_mcps.main(["--verbose"]), 0)
+
+        _, selection, agents = mock_install_skills.call_args.args
+        self.assertEqual(selection, {"mattpocock": ["tdd"], "ponytail": ["ponytail"]})
+        self.assertEqual(agents, ["claude"])
+        mock_install_codebase_memory.assert_not_called()
+        mock_install_agentmemory.assert_called_once()
+
 
 
 if __name__ == "__main__":

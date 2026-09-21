@@ -13,6 +13,7 @@ Docs:
     - OMP / Oh My Pi (`omp`)
     - OpenAI Codex CLI (`codex`)
     - Claude Code (`claude`)
+  - Without `--all`/`--yes` a checkbox picker selects which CLIs to install.
 - `agentic-install-skills-mcps`
   - Installs:
     - mattpocock skills pack (global)
@@ -31,6 +32,7 @@ Docs:
     - `--skill-profile` (for example: `default`, `minimal`, `agentic-only`).
     - `--skill-config PATH` to use a custom skill-pack config.
     - `--all-skills` to install every configured pack.
+  - With no selection flags on a TTY the command is guided: three checkbox pickers (agents, skills grouped by pack with the `default` profile pre-checked, MCP tooling). Space toggles, `a` selects all, `i` inverts, enter confirms; `--yes` keeps the flag-only non-interactive behaviour.
   - Example:
     - `agentic-install-skills-mcps --all-skills --skill-agent hermes,claude,codex --yes`
   - Skill config JSON keeps the same shape as the bundled default.
@@ -332,4 +334,4 @@ The run is successful only if all checks pass:
 - `node:20-bullseye-slim` was the original minimum; the image moved to `bookworm-slim` in `b49fa8f` when it gained `xz-utils`/`libatomic1`/`unzip` for Hermes' Node 26 + bun runtime (ADR-0001 records the bullseye-era measurements).
 - `alpine` images were rejected due installer/runtime incompatibilities (`omp`/Hermes path).
 ## Dependencies
-- `rich` and `pyyaml` are required and are installed automatically as package dependencies.
+- `rich`, `pyyaml`, and `questionary` are required and are installed automatically as package dependencies.

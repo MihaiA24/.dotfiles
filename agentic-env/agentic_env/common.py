@@ -9,14 +9,17 @@ import re
 import shutil
 import tarfile
 import subprocess
+import sys
 import tempfile
 import urllib.request
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Iterable
+from typing import Sequence
 
 from rich.console import Console
 from rich.prompt import Confirm
+import questionary
 
 console = Console()
 _VERBOSE_OUTPUT = False
@@ -118,6 +121,36 @@ def ask(prompt: str, *, default: bool, non_interactive: bool) -> bool:
     if non_interactive:
         return default
     return Confirm.ask(f"[cyan]?[/] {prompt}", default=default)
+
+
+def choose(
+    prompt: str,
+    choices: Sequence[tuple[str, str, bool] | str],
+    *,
+    non_interactive: bool,
+) -> list[str]:
+    """Checkbox picker over `(value, label, checked)` rows; a bare str row is a heading.
+
+    Returns picked values in row order. Non-interactive (or stdin not a TTY) returns
+    the pre-checked values. Ctrl-C exits with status 130.
+    """
+    if non_interactive or not sys.stdin.isatty():
+        return [row[0] for row in choices if isinstance(row, tuple) and row[2]]
+
+    rows = [
+        questionary.Separator(f"── {row} ──")
+        if isinstance(row, str)
+        else questionary.Choice(row[1], value=row[0], checked=row[2])
+        for row in choices
+    ]
+    picked = questionary.checkbox(
+        prompt,
+        choices=rows,
+        instruction="(↑↓ move · space toggle · a all · i invert · enter confirm)",
+    ).ask()
+    if picked is None:
+        raise SystemExit(130)
+    return picked
 
 
 def run(cmd: Iterable[str]) -> None:

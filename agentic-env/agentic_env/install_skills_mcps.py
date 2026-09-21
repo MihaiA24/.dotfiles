@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from . import configure_agent_mcps
 from .common import (
     ask,
+    choose,
     cmd_exists,
     cmd_version_at_least,
     install_pinned_binary_archive,
@@ -360,8 +361,6 @@ def _build_install_plan(
             return None
 
         selected_skill_packs = list(profile)
-    elif non_interactive:
-        selected_skill_packs = []
     else:
         selected_skill_packs = []
 
@@ -374,16 +373,26 @@ def _build_install_plan(
     )
 
 
-def _select_skill_packs(manifest: SkillManifest, non_interactive: bool) -> list[str]:
-    selected: list[str] = []
+def _pick_skills(manifest: SkillManifest) -> dict[str, list[str]]:
+    """One checkbox row per skill, grouped by pack; returns pack -> skill filter
+    ([] = the entire pack). Rows are pre-checked from the `default` profile."""
+    default_packs = manifest.profiles.get("default")
+    rows: list[tuple[str, str, bool] | str] = []
     for pack in manifest.packs.values():
-        if ask(
-            f"Install skill pack: {pack.label}?",
-            default=False,
-            non_interactive=non_interactive,
-        ):
-            selected.append(pack.name)
-    return selected
+        checked = default_packs is None or pack.name in default_packs
+        rows.append(pack.label)
+        if pack.skills:
+            rows.extend((f"{pack.name}/{skill}", skill, checked) for skill in pack.skills)
+        else:
+            rows.append((f"{pack.name}/", f"{pack.label} (entire pack)", checked))
+
+    selection: dict[str, list[str]] = {}
+    for value in choose("Select skills to install", rows, non_interactive=False):
+        pack_name, _, skill = value.partition("/")
+        skills = selection.setdefault(pack_name, [])
+        if skill:
+            skills.append(skill)
+    return selection
 
 
 def _command_path_on_path(
@@ -521,10 +530,29 @@ def _configure_hermes_agentmemory() -> bool:
 
 
 
+def _resolve_pack_skills(
+    manifest: SkillManifest, packs: list[str], requested: list[str]
+) -> dict[str, list[str]]:
+    """Pack -> skill filter to pass to `skills add`; [] means the entire pack."""
+    selection: dict[str, list[str]] = {}
+    for name in packs:
+        pack = manifest.packs[name]
+        if not pack.skills:
+            selection[name] = list(requested)
+        elif not requested:
+            selection[name] = list(pack.skills)
+        else:
+            filtered = [skill for skill in requested if skill in pack.skills]
+            if not filtered:
+                warn(f"{pack.label}: no requested skills matched this pack's filter; skipped")
+                continue
+            selection[name] = filtered
+    return selection
+
+
 def _install_skills(
     manifest: SkillManifest,
-    skill_packs: list[str],
-    requested_skills: list[str],
+    selection: dict[str, list[str]],
     skill_agents: list[str],
 ) -> bool:
     if not cmd_exists("skills") and not cmd_exists("npm"):
@@ -535,21 +563,9 @@ def _install_skills(
         warn("No target agents selected for skill installation")
         return False
 
-    for name in skill_packs:
-        pack = manifest.packs[name]
-        if pack.skills:
-            if requested_skills:
-                filtered_skills = [skill for skill in requested_skills if skill in pack.skills]
-                if not filtered_skills:
-                    warn(f"{pack.label}: no requested skills matched this pack's filter; skipped")
-                    continue
-            else:
-                filtered_skills = list(pack.skills)
-        else:
-            filtered_skills = requested_skills
-
-        if not _install_skill_package(manifest.source(name), filtered_skills, skill_agents):
-            warn(f"{pack.label}: installation failed")
+    for name, skills in selection.items():
+        if not _install_skill_package(manifest.source(name), skills, skill_agents):
+            warn(f"{manifest.packs[name].label}: installation failed")
             return False
     return True
 
@@ -717,38 +733,38 @@ def main(argv: list[str] | None = None) -> int:
     requested_skill_names = list(plan.skill_names.selected)
     selected_skill_agents = list(plan.skill_agents.selected) or _all_skill_agents()
 
+    skill_selection = _resolve_pack_skills(manifest, selected_skill_packs, requested_skill_names)
     do_skills = bool(selected_skill_packs)
     do_codebase = plan.do_codebase
     do_agentmemory = plan.do_agentmemory
 
-    if not do_skills and not do_codebase and not do_agentmemory:
-        do_skills = ask(
-            "Install skill packs",
-            default=False,
-            non_interactive=non_interactive,
+    if not do_skills and not do_codebase and not do_agentmemory and not non_interactive:
+        if not args.skill_agent:
+            selected_skill_agents = choose(
+                "Install skills for which agents?",
+                [(agent, label, True) for agent, _, label in SKILL_AGENTS],
+                non_interactive=False,
+            )
+        skill_selection = _pick_skills(manifest)
+        do_skills = bool(skill_selection)
+        selected_mcps = choose(
+            "Select MCP tooling",
+            [
+                (
+                    "codebase-memory-mcp",
+                    "codebase-memory-mcp (project code graph, checksum-pinned binary)",
+                    True,
+                ),
+                ("agentmemory", "agentmemory (Hermes memory provider, npm)", True),
+            ],
+            non_interactive=False,
         )
-        if do_skills:
-            selected_skill_packs = _select_skill_packs(manifest, non_interactive)
-            do_skills = bool(selected_skill_packs)
-        do_codebase = ask(
-            "Install MCP: codebase-memory-mcp",
-            default=False,
-            non_interactive=non_interactive,
-        )
-        do_agentmemory = ask(
-            "Install MCP: agentmemory",
-            default=False,
-            non_interactive=non_interactive,
-        )
+        do_codebase = "codebase-memory-mcp" in selected_mcps
+        do_agentmemory = "agentmemory" in selected_mcps
 
     ok_all = True
     if do_skills:
-        ok_all = (
-            _install_skills(
-                manifest, selected_skill_packs, requested_skill_names, selected_skill_agents
-            )
-            and ok_all
-        )
+        ok_all = _install_skills(manifest, skill_selection, selected_skill_agents) and ok_all
     else:
         skip("skill packs: skipped")
 
