@@ -108,62 +108,33 @@ What the rules bought: every rejection below names the pre-registered threshold 
 - **Revisit:** litmus 0× by **2026-10-01** → remove `codebase-memory-mcp` from the OMP roots (keep installed for per-project on-demand mounting). Upstream 0.11.0 available vs floor 0.9.0; bump only on promotion.
 - **Wiring:** `mcpServers: {codebase-memory-mcp}` gated by `disabledServers: [agentmemory, node_repl, codebase-memory-mcp, lean-ctx]` on `~/.omp/agent/mcp.json` and `~/.pi/agent/mcp.json` (`OMP_GATED_SERVERS`; bak `mcp.json.bak-leanctx-drop`, `.bak-gate`). Hermes wired too (unmeasured).
 
-### 6. Skills — fit-curated roster (implementation approved 2026-09-21)
+### 6. Skills
 
-- **Decided:** 38 curated skills: **19 Matt + 11 pstack + 6 ponytail + 2 caveman**. Roles remain Core, Escalation and Excluded, judged by fit for a named job rather than usage counts. Matt and pstack are complete vendored packages with immutable upstream provenance and documented local OMP/Hermes adaptations; ponytail and caveman retain their reviewed tags.
-- **Why:** measured style choices remain ponytail −10.3% cost (force-injected) and caveman −8.5% (on demand). Earlier fit reports remain historical; `docs/skills-workflow-recheck-2026-09-21.md` records the reassessment, subsequent approval and exercised implementation evidence. This section is operative where earlier recommendations differ.
-- **Invocation:** all eleven pstack skills remain manual-only. Matt's `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `teach`, `to-spec`, `to-tickets`, `wait-what`, `wayfinder` and `wizard` are manual-only; the other ten keep narrow automatic triggers, including `writing-for-agents` for agent-facing documents. Explicitly invoked recipes may load named dependencies. Role and recipe references do not override invocation or action permissions. OMP 18.2.8 hides manual metadata from its automatic listing while preserving named loading. Installed Hermes does not honor that flag in its catalog: `Manual only:` descriptions and body guards are behavioral boundaries, not enforced catalog hiding.
-- **Roster (2026-09-21).** Recipe letters refer to the routing below.
+**38 curated skills:** 19 Matt, 11 pstack, six ponytail, two caveman. [The manifest](agentic_env/skill-packs.json) owns the roster and sources; [Matt](agentic_env/vendored/mattpocock/UPSTREAM.md) and [pstack](agentic_env/vendored/pstack/UPSTREAM.md) record provenance and adaptations. Selection is by job fit, not usage counts. [Verification and research history](docs/skills-workflow-recheck-2026-09-21.md).
 
-  | Skill | Pack | Role | Job | Trigger → work product |
-  |---|---|---|---|---|
-  | wayfinder | Pocock | Escalation | multi-session decision uncertainty | explicit routing request → durable workspace; not a prerequisite for direct work |
-  | grilling, grill-with-docs, domain-modeling | Pocock | Core | B, D: settle behaviour, invariants, terms | → decision map, `CONTEXT.md` terms |
-  | codebase-design | Pocock | Core | B, D: interface shape; loaded by `tdd` | → deep-module seams |
-  | tdd | Pocock | Core | A, B when test-first is requested | → red-green at agreed seams |
-  | diagnosing-bugs | Pocock | Core | C | → observable failure, narrowed cause |
-  | code-review | Pocock | Core | A–D: Standards (`CODING_STANDARDS.md`) + Spec review | → one frozen `refs` or explicitly scoped `wip` snapshot; no commit-first requirement |
-  | how | pstack | Core | E; A/C/D when the mechanism is unclear | → architectural explanation |
-  | ponytail (+audit, debt, gain, help, review) | ponytail | Core | every task, force-injected | — |
-  | research | Pocock | Escalation | B, E | external facts block a choice → findings file |
-  | prototype | Pocock | Escalation | B | interaction or state model still uncertain → throwaway |
-  | to-spec | Pocock | Escalation | B, D | work must survive a handoff → spec |
-  | to-tickets | Pocock | Escalation | B, D, F | ≥ 2 independently verifiable slices → tickets |
-  | resolving-merge-conflicts | Pocock | Escalation | any | conflict in progress → resolved tree |
-  | handoff | Pocock | Escalation | any | context replacement (compaction covers it mechanically) → handoff doc |
-  | teach | Pocock | Escalation | E | explicitly requested personal learning → lessons; not course/notebook authoring |
-  | why | pstack | Escalation | C, D, E | historical intent affects the decision → sourced motivation |
-  | blast-radius | pstack | Escalation | C, D | change touches lifecycle, concurrency, shared state, downstream → one safety fact proven by running code |
-  | interrogate | pstack | Escalation | consequential residual uncertainty | explicit request → adversarial reviews of the same frozen input, with actual returned provider/model identities |
-  | unslop | pstack | Escalation | targeted prose cleanup | explicit request or named recipe dependency → cleaned text; never globally injected |
-  | create-verification-skill | pstack | Escalation | A, F | missing reusable user-journey check → project-local `.agents/skills/verify-<app>`; prove one mapped feature |
-  | maintain-verification-skill | pstack | Escalation | existing mapped verifier drifts | explicit request → exercise every mapped feature, update only that verifier; report product regressions |
-  | technical-writing | pstack | Escalation | substantial human/learner-facing material | explicit request → audience-shaped outline, researched and revised text |
-  | writing-for-agents | Pocock | Escalation | agent-facing documents | narrow automatic trigger → useful context pointers and invocation-aware skills |
-  | improve-codebase-architecture | Pocock | Escalation | architecture survey | explicit request → ranked opportunities; no product edits or mandatory lone worker |
-  | wizard | Pocock | Escalation | human-only setup or cutover | explicit request and approved stages/destinations → script for the human to execute; no secret survey or automatic execution |
-  | wait-what | Pocock | Escalation | unclear prior explanation | explicit request → concrete clarification |
-  | show-me-your-work | pstack | Escalation | F | someone must audit the run afterwards → decision log |
-  | reflect | pstack | Escalation | any close | costly detour suggests a reusable fix → skill patch |
-  | recall | pstack | Escalation | historical conversations | explicit question → scoped, source-backed transcript retrieval; distinct from the native memory tool of the same name |
-  | caveman, caveman-commit | caveman | Escalation | any | terse output wanted → same content, fewer tokens |
+**Routing, not a pipeline.** Small known changes stay direct: implement and exercise the affected path. Core methods apply only to their named job; escalation needs the stated trigger.
 
-- **Recipes** (routing choices, never a mandatory chain): **A** known small change — read, state acceptance, make the smallest change and exercise the affected real path; review when requested or warranted. **B** uncertain feature — grilling/grill-with-docs, then prototype or research for unresolved facts; durable specs/tickets only when needed, interface design and one vertical slice. **C** bug — diagnose, recover intent with `why` when relevant, failing-before check, shared-cause fix; use `blast-radius` for lifecycle/concurrency/shared-state risk. **D** risky migration — trace producers/consumers with `how`, establish compatibility policy, record the cutover contract, partition independent caller groups and verify downstream safety. **E** explanation/learning — `how` for mechanism, `why` for rationale, `wait-what` for clarification; Matt `teach` only for personal learning, research + technical writing + runnable material for authoring. **F** long parallel delivery — falsifiable finish condition, independent slices with one integration owner, current-run audit when requested, real runtime verification; reflect only on a costly detour. Routine work checks affected paths, not automatic full-map verifier maintenance.
-- **Excluded** (deliberately not installed; reopen condition stated):
-  - `implement` (Pocock) — the approved direct-work route does not need its orchestrator or unconditional commit behavior. The unadapted installed copy was removed. WIP review is fixed at `code-review`, not worked around by committing first. Reopen only for an explicitly wanted orchestrator with bounded publication authority.
-  - `architect` + `arena` (pstack) — `architect` implements by default; same-model workers do not establish model diversity. Reopen for an expensive, reversible design choice needing their full method, with an explicit design-only stop.
-  - `swarm` (pstack) — no approved need for another coverage orchestrator. Native task batches are available, not a claim of equivalence to its full method. Reopen when that coverage method is specifically needed.
-  - pstack `tdd` — public-name collision with Matt's selected `tdd`. No second public name and no approval to fold the full pstack regression contract into Matt's method. Existing diagnosis and failing-before verification remain; reopen only on an explicit method decision.
-  - pstack `teach` — public-name collision with Matt's selected personal-learning method. Its complete teaching contract was not folded into Matt's method or claimed equivalent to `how`; reopen on an explicit teaching-method decision.
-  - `implement-spec` (Pocock, beta) — a second scheduler over the same ticket graph. Reopen: leaves beta and a full spec-to-one-PR run is wanted.
-  - `retro` (Pocock, beta) — body and beta maturity label disagree; not adopted. Reopen for a focused fit comparison with `reflect` when its maturity is clear.
-  - `principle-*` (pstack, 23) — `/`-only, so as skills they never warn unprompted; the six that fit are condensed into `CODING_STANDARDS.md` and applied by `code-review`'s Standards axis. Reopen: never as skills.
-  - pstack style cluster (poteto-mode, laziness-protocol, subtract-before-you-add, minimize-reader-load, no-comments) — duplicates benchmarked ponytail/caveman; double style injection is paid prompt weight; no-comments contradicts load-bearing `ponytail:` ceiling markers. Novel fragments fold into ponytail text, never a second skill.
-  - `grill-me` — existing interview methods cover the selected job. `bro` — `wait-what` is the chosen clarification entry. `to-questionnaire`, `ask-matt` — no approved job. `graphify` — existing local one-off, outside the curated packs.
-- **Diagnostic footnote (usage, 08-22 raw DBs):** 567 OMP "sessions" = 226 main + 341 subagent; grill-with-docs 74 OMP / 215 Hermes user-invoked (413 = registry loads); tdd/code-review 0 user-invoked vs 108/320 model-invoked — the model reaches for them, the user never does, so nothing is forced to a slash command; `resolving-merge-conflicts`/`diagnosing-bugs` sat on measured pains (64+ conflicted merges, repeat-diagnosis loops) while structurally invisible to OMP (`enableAgentsUser: false`) — low use was availability, not misfit; `to-spec`/`to-tickets` 1 use each in 5 months, which the 08-22 pass read as misfit and the 09-15 pass re-read as "no recipe named their trigger". Counting units: `docs/CONTEXT.md`.
-- **Revisit:** a recipe step with no fitting skill; an Excluded trigger firing; next fit audit.
-- **Wiring:** `skill-packs.json` selects the default 38-skill roster. Matt source is `./vendored/mattpocock/skills`, reviewed at `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`; pstack is `./vendored/pstack/skills`, retaining baseline `c1c0a32802223f4be824112dd83d33ad29a8b26c` and recording additions from `640ea3abfbdef74aad432b58d8586e4bf645f42d` (no intervening pstack subtree change). Each pack's `UPSTREAM.md` records local modifications; licences, references and scripts ship with it. Caveman stays `JuliusBrussee/caveman#v2.3.1`; ponytail stays `DietrichGebert/ponytail#v4.9.0`. The installer resolves local pack paths against the Python package. `~/.agents/skills` is canonical; Claude and Hermes entries symlink there. OMP loads the Claude root once via `skills.enableClaudeUser: true` and `skills.enableAgentsUser: false`. Project `.agents/skills` discovery remains enabled in OMP; Hermes requires explicit project trust. Hermes currently warns on the global symlink targets while successfully loading them; no trust configuration was weakened to suppress that warning.
-- **Review and verification boundaries:** `code-review/scripts/review_snapshot.py` freezes tracked context plus explicitly selected WIP, using a temporary Git index/object database without changing user staging. Checksums detect mutation before/after review; they are not a filesystem sandbox. Review prompts/results stay outside the snapshot. `interrogate/scripts/run_reviewers.py` supplies identical prompt bytes to tool-less OMP routes and requires two distinct successful returned provider/model identities; substitutions and failures are visible. Never describe an unrestricted worker as read-only just because its prompt prohibits edits. Reusable verifiers stay project-local; creation proves one feature, maintenance exercises the whole existing map and does not patch product code.
+| Job | Core | Escalation → work product |
+|---|---|---|
+| Requirements and interfaces | `grilling`, `grill-with-docs`, `domain-modeling`, `codebase-design` | External facts → `research`; uncertain interaction → `prototype`; multi-session decisions → `wayfinder` |
+| Implementation and bugs | Matt `tdd` when test-first is requested; `diagnosing-bugs` for failures | Lifecycle/shared-state/downstream risk → `blast-radius` executed safety proof |
+| Review | `code-review`: Standards + Spec | Consequential residual uncertainty → `interrogate` independent critique |
+| Understanding | `how`: current mechanism | Historical intent → `why`; unclear explanation → `wait-what`; Matt `teach` for requested personal learning, not course authoring |
+| Style | Force-injected ponytail bundle | Requested terse output → caveman; prose cleanup → `unslop`, never globally injected |
+
+Other escalations: `to-spec`/`to-tickets` for durable plans; `handoff` for explicit transfer; `resolving-merge-conflicts` for an active conflict; `improve-codebase-architecture` for report-only surveys; `show-me-your-work` for run audits; `reflect` for costly detours; `recall` for scoped transcripts, not the memory bank. Agent documents use `writing-for-agents`; substantial human-facing material uses `technical-writing`. `wizard` requires approved stages/destinations and human execution, without secret-file inspection.
+
+**Invocation:** all pstack skills are manual-only, as are Matt's `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `teach`, `to-spec`, `to-tickets`, `wait-what`, `wayfinder`, `wizard`. Other Matt methods retain narrow automatic triggers. Explicitly invoked recipes may load named dependencies; role labels grant no invocation or action authority.
+
+**Runtime:** `~/.agents/skills` is canonical; Claude and Hermes link to it. OMP loads the Claude root (`enableClaudeUser: true`, `enableAgentsUser: false`) and hides manual skills from its automatic listing, not named loading. Installed Hermes ignores the manual flag and warns on those symlink targets while loading successfully: body guards are behavioral, not enforced hiding. Do not weaken trust to suppress warnings.
+
+**Review:** freeze explicit refs or scoped WIP, including intended committed/staged/unstaged/untracked changes via a temporary Git index/object database, without altering user staging. Both reviewers use that snapshot; verify hashes before/after, with prompts/results outside it. Hashes are not a sandbox. Restricted grants or tool-less input enforce read-only review. Multi-model claims require two distinct successful returned provider/model identities; report substitutions and failures.
+
+**Verification:** reuse existing drivers. Create `.agents/skills/verify-<app>` only when needed and prove one mapped feature. Explicit maintenance exercises every mapped feature and edits only the verifier; report product regressions. Ordinary changes check affected paths. OMP discovers project skills; Hermes requires explicit project trust.
+
+**Exclusions:** `implement` adds an unwanted orchestrator/unconditional commit; `bro` duplicates the chosen `wait-what`. Public `tdd`/`teach` remain Matt's; full pstack contracts were not folded into them. Reopen `architect`/`arena` only for expensive competing designs with a design-only stop, and `swarm` only for a needed coverage method—native fan-out is not equivalent. Beta schedulers/retrospectives require maturity and a specific job; principles belong in standards, not another installed pack; duplicate style/interview methods remain excluded. All other unlisted skills need a deliberate adoption decision. Local `graphify` remains outside the packs.
+
+Branch creation, commits, pushes, PRs, tracker writes, infrastructure and credential changes need their own authorization. Revisit the roster when a named job lacks a method; complete historical rationales remain in [the prior contract](https://github.com/MihaiA24/.dotfiles/blob/0a827c85d89e3737cca03f20eb5a17c3c1b117fe/agentic-env/DECISIONS_AI_TOOLING.md).
 
 ### 7. Hooks — verification-recorder + retention-canary
 
@@ -198,7 +169,7 @@ Pre-registered triggers; nothing here is acted on without the trigger firing. Ea
 - Canary fire-rate on 18.1.x → read at the next read-out; zero fires and #8940 still open = keep.
 - codebase-memory litmus 0× by **2026-10-01** → remove `codebase-memory-mcp` from the OMP roots (keep installed for per-project on-demand mounting). Upstream 0.11.0 available vs floor 0.9.0; bump only on promotion (the archives are checksum-pinned, so this one does not float).
 - mattpocock `retro` maturity becomes unambiguous → fit audit against pstack `reflect`; do not infer graduation from a substantive body while the beta index still says stub.
-- Matt and pstack vendoring (2026-09-21, revisions in §6 Wiring) → re-copy only for an approved addition or a relevant upstream fix, retaining complete packages and reapplying the documented native adaptations. A new tag alone does not justify deleting the copies: first establish that upstream preserves the required invocation, review-scope and authority contracts. Update each `UPSTREAM.md` and §6 together.
+- Matt/pstack update → reviewed source, complete assets and reapplied adaptations; follow each pack's `UPSTREAM.md`. A new tag alone does not replace the native invocation, scope and authority contracts.
 - lean-ctx need fires (semantic search visibly missing on a real task) → reinstall ≥ 3.10.0 per ADR-0009.
 - Cross-project memory becomes a live need → Hindsight vs mem0 bake-off.
 - Trendshift screening: **Retired** as a routine (0 adoptions across two sweeps); on-demand reruns only.
