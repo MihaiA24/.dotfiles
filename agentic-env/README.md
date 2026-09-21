@@ -105,7 +105,8 @@ Unit tests: `uv run pytest -q` (pytest comes from the `dev` dependency group in 
 
 Reviewed versions in `agentic_env/stack_metadata.py` are **floors** (`STACK_VERSION_FLOORS`), not exact pins.
 
-- Install fetches the latest release of each floating component and fails if the result is below the floor; a host running ahead of the review is compliant.
+- Install fetches the latest release of each floating component and fails if the result is below the floor; a host running ahead of the review is compliant. The `npx` skills fallback verifies its CLI version before installing any skill pack and fails closed if the version cannot be read.
+- Claude Code installs from its `latest` channel, not the delayed `stable` channel.
 - `agentic-update-stack` reinstalls the floating components unconditionally, so every run lands on the current latest.
 - Two components do not float: Hermes (installer fetched at commit `HERMES_INSTALL_COMMIT`, which refuses to roll a checkout backwards) and `codebase-memory-mcp` (per-arch SHA256-pinned release archives). They move only when this repo's reviewed metadata does.
 - Remote install scripts stay checksum-pinned regardless of which version they install; npm references install `@latest` and carry a written reason in the remote contract.

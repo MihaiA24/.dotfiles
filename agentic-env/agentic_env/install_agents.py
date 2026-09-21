@@ -137,10 +137,7 @@ def _install_claude(non_interactive: bool, *, force: bool = False) -> bool:
         url=CLAUDE_INSTALL_URL,
         expected_sha256=CLAUDE_INSTALL_SHA256,
         interpreter="bash",
-        # `stable` is the installer's latest validated release channel
-        # (`install.sh [stable|latest|VERSION]`); no version argument at all
-        # leaves the channel to the downloaded launcher's default.
-        interpreter_args=["stable"],
+        interpreter_args=["latest"],
     ):
         return False
     if not cmd_version_at_least("claude", STACK_VERSION_FLOORS["claude"]):

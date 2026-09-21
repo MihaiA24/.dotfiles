@@ -574,6 +574,13 @@ def _install_skill_package(
     if not cmd_exists("npm"):
         warn("The curated skills CLI requires npm")
         return False
+    if not cmd_version_at_least(
+        "npx",
+        STACK_VERSION_FLOORS["skills"],
+        args=("--yes", SKILLS_CLI_PACKAGE, "--version"),
+    ):
+        warn("skills CLI: could not verify a version at or above the reviewed floor")
+        return False
     run(["npx", "--yes", SKILLS_CLI_PACKAGE, *command])
     return True
 
