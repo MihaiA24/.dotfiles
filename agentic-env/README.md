@@ -102,6 +102,7 @@ uv run python -m agentic_env.stack_doctor
 ```
 
 Unit tests: `uv run pytest -q` (pytest comes from the `dev` dependency group in `pyproject.toml`).
+The guided pickers are exercised through a real pseudo-terminal by `uv run pytest -q -k guided_pty` (agents accepted, every skill and MCP cleared with `a`, confirmed; installers are stubbed to fail if reached).
 
 ### Version policy
 

@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
+import pty
+import re
+import select
+import struct
 import sys
 import tempfile
+import termios
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -240,6 +246,85 @@ class InstallSkillsMcpsTests(unittest.TestCase):
         self.assertEqual(agents, ["claude"])
         mock_install_codebase_memory.assert_not_called()
         mock_install_agentmemory.assert_called_once()
+
+    def test_guided_pty_run_with_everything_cleared_installs_nothing(self) -> None:
+        """Drive the real pickers through a pseudo-terminal: accept the agents,
+        clear every skill and MCP with `a`, confirm -> three skips, exit 0."""
+        manifest = install_skills_mcps.load_skill_manifest(
+            install_skills_mcps._SKILL_PACK_CONFIG_PATH
+        )
+        assert manifest is not None
+        output, status = _run_in_pty(
+            _GUIDED_CHILD,
+            [
+                (b"which agents?", b"\r"),
+                (b"Select skills to install", b"a\r"),
+                (b"Select MCP tooling", b"a\r"),
+            ],
+        )
+        text = re.sub(rb"\x1b\[[0-9;?]*[A-Za-z]", b"", output).decode("utf-8", "replace")
+
+        self.assertEqual(status, 0, text)
+        self.assertNotIn("INSTALL-CALLED", text)
+        for line in ("skill packs: skipped", "codebase-memory-mcp: skipped", "agentmemory: skipped"):
+            self.assertIn(line, text)
+        for pack in manifest.packs.values():
+            self.assertIn(pack.label, text)
+            for skill in pack.skills:
+                self.assertIn(skill, text)
+
+
+# Runs `main([])` in a fresh interpreter behind the pty; any install call trips
+# the sentinel so a picker regression cannot reach npm/skills.
+_GUIDED_CHILD = """
+from unittest.mock import patch
+from agentic_env import install_skills_mcps as m
+trip = {"side_effect": AssertionError("INSTALL-CALLED")}
+with patch.object(m, "_validate_remote_contract", return_value=True), \\
+     patch.object(m, "_install_skills", **trip), \\
+     patch.object(m, "_install_codebase_memory", **trip), \\
+     patch.object(m, "_install_agentmemory", **trip):
+    raise SystemExit(m.main([]))
+"""
+
+
+def _run_in_pty(code: str, steps: list[tuple[bytes, bytes]], timeout: float = 30) -> tuple[bytes, int]:
+    """Exec `python -c code` on a pseudo-terminal; for each (expect, send) wait
+    until `expect` was printed, then type `send`. Returns (raw output, exit code)."""
+    pid, fd = pty.fork()
+    if pid == 0:
+        fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", 60, 120, 0, 0))
+        os.environ["TERM"] = "xterm"
+        os.execv(sys.executable, [sys.executable, "-c", code])
+
+    output = b""
+
+    def read_until(expect: bytes | None) -> None:
+        nonlocal output
+        deadline = os.times().elapsed + timeout
+        while expect is None or expect not in output:
+            ready, _, _ = select.select([fd], [], [], max(0.0, deadline - os.times().elapsed))
+            if not ready:
+                raise AssertionError(f"timed out waiting for {expect!r}\n{output.decode('utf-8', 'replace')}")
+            try:
+                chunk = os.read(fd, 4096)
+            except OSError:  # Linux raises EIO at EOF; macOS returns b""
+                chunk = b""
+            if not chunk:
+                if expect is None:
+                    return
+                raise AssertionError(f"child exited before {expect!r}\n{output.decode('utf-8', 'replace')}")
+            output += chunk
+
+    try:
+        for expect, send in steps:
+            read_until(expect)
+            os.write(fd, send)
+        read_until(None)
+    finally:
+        os.close(fd)
+        _, status = os.waitpid(pid, 0)
+    return output, os.waitstatus_to_exitcode(status)
 
 
 
