@@ -15,13 +15,13 @@ Docs:
     - Claude Code (`claude`)
 - `agentic-install-skills-mcps`
   - Installs:
-    - mattpocock skills pack (global)
-    - ponytail skill bundle (global, agent-dispatch)
-    - caveman and the vendored pstack skills (global)
+    - 19 vendored Matt skills (global)
+    - 6 ponytail skills (global, agent-dispatch)
+    - 2 caveman and 11 vendored pstack skills (global): **38 curated skills** total
     - `codebase-memory-mcp` (UI install supported)
     - `agentmemory` (CLI + Hermes MCP config)
   - Skill packs are driven by the bundled `agentic_env/skill-packs.json` default with:
-    - `packs` entries whose `source` is `owner/repo#<tag>` (pinned; `skills add` clones that tag) or `./<dir>` (a copy vendored inside the package, installed as a local path; pstack lives at `agentic_env/vendored/pstack`, provenance in its `UPSTREAM.md`, ADR-0010). Each pack can define optional `skills` (array of specific skill names) to install only those from that pack by default.
+    - `packs` entries whose `source` is `owner/repo#<ref>` (reviewed tag or commit) or `./<dir>` (a complete package vendored locally). Matt and pstack live at `agentic_env/vendored/mattpocock` and `agentic_env/vendored/pstack`; each `UPSTREAM.md` records immutable provenance and local adaptations. Each pack can define optional `skills` (specific names) to install only those by default.
       The roster's roles, triggers and exclusions: `DECISIONS_AI_TOOLING.md` §6; review standards: `CODING_STANDARDS.md`.
     - `profiles` (named pack sets).
   - Supported options:
@@ -36,6 +36,9 @@ Docs:
   - Skill config JSON keeps the same shape as the bundled default.
     - Packs without `skills` install full pack contents by default.
     - When `skills` exists and you pass `--skill`, installs the intersection of both lists.
+  - OMP loads the canonical `~/.agents/skills` store through Claude-root links; Hermes has matching links. All pstack skills and selected Matt methods, including `wizard`, remain manual-only. OMP hides their automatic listing; installed Hermes ignores that metadata, so explicit description/body guards apply rather than mechanical hiding. Hermes also warns about external canonical symlink targets, although loading succeeds; installation does not weaken its trust settings.
+  - `code-review` and `interrogate` share a frozen, explicitly scoped review input that includes intended WIP without a commit-first workaround. Snapshot integrity is checked before/after review; multi-model review records returned identities, not just requested names.
+  - Reusable verification lives in project `.agents/skills/verify-<app>` directories, not a generic global verifier. Creation proves one feature; explicitly requested maintenance exercises the existing map. Hermes requires explicit project trust; OMP discovers the project root directly.
 - `agentic-configure-agent-mcps`
   - Adds selected project-memory MCP servers when missing:
     - Hermes: `codebase-memory-mcp` and `agentmemory`
