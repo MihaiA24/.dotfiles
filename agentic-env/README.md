@@ -90,15 +90,15 @@ agentic-update-stack
 # agentic-configure-agent-mcps --yes
 ```
 
-Run package modules directly when developing from the checkout:
+Run from the checkout without installing (`uv run` syncs the venv and exposes the same `agentic-*` commands; without `--yes` or selection flags the installers open their checkbox pickers):
 
 ```bash
-uv run python -m agentic_env.bootstrap
-uv run python -m agentic_env.install_agents
-uv run python -m agentic_env.install_skills_mcps
-uv run python -m agentic_env.configure_agent_mcps
-uv run python -m agentic_env.update_agentic_stack
-uv run python -m agentic_env.stack_doctor
+cd /path/to/your/dotfiles/agentic-env
+uv run agentic-install-skills-mcps   # guided: agents, skills per pack, MCPs
+uv run agentic-install-agents        # guided: agent CLIs
+uv run agentic-bootstrap
+uv run agentic-stack-doctor
+# or the module form: uv run python -m agentic_env.install_skills_mcps
 ```
 
 Unit tests: `uv run pytest -q` (pytest comes from the `dev` dependency group in `pyproject.toml`).
