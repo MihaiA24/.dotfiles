@@ -206,7 +206,7 @@ Pinned revisions come from the pack `source` for remote packs and the `upstream`
 - Hermes YAML writes keep a `.agentic-env.bak` backup but may drop comments and formatting. The configurator fails on Hermes drift; doctor only warns.
 - OMP gates `codebase-memory-mcp` and `node_repl`; `agentmemory` and `lean-ctx` stay excluded. The configurator seeds missing OMP settings only when the required checkout hooks exist. See [the contract](DECISIONS_AI_TOOLING.md).
 - Reviewed versions in [stack metadata](agentic_env/stack_metadata.py) are floors. Install/update fetch the latest floating components and reject versions below the floor. Claude uses its `latest` channel.
-- The Hermes installer and `codebase-memory-mcp` archives stay at reviewed identities; remote scripts stay checksum-pinned.
+- Hermes (its release and its installer script) and the `codebase-memory-mcp` archives stay at reviewed identities; remote scripts stay checksum-pinned.
 - Do not substitute `agentmemory upgrade`: it can invoke the `iii-engine` installer and modify the current workspace.
 
 Check Hermes wiring with `hermes mcp list` and `hermes mcp test <server>`. Expected definitions are in [the configurator](agentic_env/configure_agent_mcps.py). To select Hermes' memory provider and add missing entries:
