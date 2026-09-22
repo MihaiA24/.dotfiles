@@ -29,7 +29,7 @@ agentic-stack-doctor
 
 Use each command's `--help` for options. Update this package with `uv tool upgrade agentic-env`.
 
-Without selection flags on a terminal, `agentic-install-agents` and `agentic-install-skills-mcps` open checkbox pickers. Space toggles a row, `a` toggles all, `i` inverts, enter confirms. The skills run asks for skills, then target agents, then MCP servers, then prints the selection with the flag-only command that repeats it and confirms before installing.
+Without selection flags on a terminal, `agentic-install-agents` and `agentic-install-skills-mcps` open checkbox pickers. Space toggles a row, `a` toggles all, `i` inverts, enter confirms. The skills run asks for skills, then a destination: supported harnesses or **Other / custom directory**. Supported harnesses lead to the agent and MCP pickers; a custom directory asks for the exact skills-folder path and skips MCP installation. Both paths print the selection and replay command, then ask for confirmation.
 
 `--yes` takes the flags as given without prompting, and a run without a terminal needs flags because no picker can open. `agentic-bootstrap --interactive` lets its two install phases prompt instead of installing every CLI and the `--skill-profile` packs.
 
@@ -44,6 +44,35 @@ agentic-install-skills-mcps --skill-profile default --yes
 The skills picker lists one row per skill under its pack heading, plus an `All of <pack>` row that takes the whole roster. The `default` profile pre-checks the pack rows; `--skill NAME` pre-checks those skill rows instead. A manifest `skills` entry is either a name or `{"name": ..., "description": ...}`, and the description shows under the list while that row is pointed at. `--mcp` installs a single MCP server (`codebase-memory-mcp` or `agentmemory`); `--all-mcps` installs both.
 
 [Decisions §6](DECISIONS_AI_TOOLING.md#6-skills) owns routing, invocation, review scope and Hermes limitations. Complete Matt/pstack packages are vendored; their `UPSTREAM.md` files record sources and adaptations.
+
+#### Install into another harness's directory
+
+`--skills-dir PATH` copies complete selected packages into `PATH/<skill>/SKILL.md`, including their scripts and references. `PATH` is the skills folder, not the project root. No OMP/Hermes installation is required.
+
+Run `uv run agentic-install-skills-mcps` from this checkout for the full guided journey: choose skills, select **Other / custom directory**, enter the path, then review and confirm. Choose **Supported harnesses** instead to keep the existing managed-agent installation. Ctrl-C at either destination prompt cancels without installing anything.
+
+From this checkout, without replacing the host's installed management CLI:
+
+```bash
+cd /path/to/your/dotfiles/agentic-env
+
+# Skip the destination prompts; still choose skills interactively.
+uv run agentic-install-skills-mcps --skills-dir "/path/to/project/.devin/skills"
+
+# All 38 curated skills without prompts.
+uv run agentic-install-skills-mcps \
+  --skills-dir "/path/to/project/.devin/skills" --skill-profile default --yes
+
+# Or a subset, in any directory you choose.
+uv run agentic-install-skills-mcps \
+  --skills-dir "/path/to/custom skills" --skill-pack mattpocock --skill tdd,code-review --yes
+```
+
+Choose **one** installation command above. The normal `--skill-pack`, `--skill-profile`, `--skill`, and `--skill-config` selectors still apply. Directory mode does not install MCPs or modify global skill roots/provenance; combining it with `--skill-agent`, `--mcp`, or `--all-mcps` is an error. Without a terminal, provide selection flags.
+
+Existing skill names—including symlinks—are refused before any package is copied; unrelated destination files are preserved. To refresh, install into a new directory and compare with your local changes before replacing them. These are standalone copies, not linked to the checkout or registered for global skills updates.
+
+The example uses Devin for Terminal's `.devin/skills` layout. Set the directory your harness actually discovers. Skill bodies remain unchanged: OMP/Hermes-specific tools and delegation instructions may need adaptation, and copying them does not verify execution in another harness.
 
 #### Refresh skills on an existing OMP host
 
