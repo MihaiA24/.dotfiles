@@ -13,7 +13,7 @@
 | Compaction | handoff @ 150K, idle on, save-to-disk | −43–50% tokens, quality held | 120K threshold | End-green < 88% → revert |
 | Memory | Mnemopi + retention-canary hook | Recall good, keyless, zero infra; canary covers silent-loss defect | Hindsight (sole challenger), mem0, agentmemory, Letta, Zep | Cross-project memory sharing needed → Hindsight |
 | Code graph | codebase-memory-mcp gated off | Costs quality, 10× tokens | GitNexus, GraphRAG, Serena, etc. | Litmus fires weekly |
-| Skills | Fit-curated roster (see Skills section): Pocock core + Ponytail forced + Caveman on demand + 11 pstack skills vendored | Fit-judged per recipe job; usage is diagnostic only | Full Pocock 25 + pstack 44 stores | A recipe step has no fitting skill; an Excluded trigger fires |
+| Skills | Fit-curated roster (see Skills section): Pocock core + Ponytail forced + Caveman on demand + 12 pstack skills vendored | Fit-judged per recipe job; usage is diagnostic only | Full Pocock 25 + pstack 44 stores | A recipe step has no fitting skill; an Excluded trigger fires |
 | Hooks | verification-recorder, retention-canary | Pass-rate read-outs; silent-memory-loss tripwire | cadence-governor (rejected 08-19), external monitoring | Recorder DB unread by next read-out; canary false-warns |
 
 ```mermaid
@@ -110,25 +110,25 @@ What the rules bought: every rejection below names the pre-registered threshold 
 
 ### 6. Skills
 
-**38 curated skills:** 19 Matt, 11 pstack, six ponytail, two caveman. [The manifest](agentic_env/skill-packs.json) owns the roster and sources; [Matt](agentic_env/vendored/mattpocock/UPSTREAM.md) and [pstack](agentic_env/vendored/pstack/UPSTREAM.md) record provenance and adaptations. Selection is by job fit, not usage counts. [Verification and research history](docs/skills-workflow-recheck-2026-09-21.md).
+**38 curated skills:** 18 Matt, 12 pstack, six ponytail, two caveman. [The manifest](agentic_env/skill-packs.json) owns the roster and sources; [Matt](agentic_env/vendored/mattpocock/UPSTREAM.md) and [pstack](agentic_env/vendored/pstack/UPSTREAM.md) record provenance and adaptations. Selection is by job fit, not usage counts. [Verification and research history](docs/skills-workflow-recheck-2026-09-21.md).
 
 **Installation scope:** managed installations use the native skills CLI and agent skill roots. Custom-directory installation copies complete selected packages into one explicit folder without selecting agent targets or registering global provenance. The Python-only route copies the vendored subset offline and reports remote-only exclusions; it is the Windows copy path, not Windows stack provisioning. Both standalone routes refuse existing skill names, leave unrelated destination files intact and preserve package bodies unchanged. Commands, prerequisites and maintenance are owned by the [installation runbooks](README.md#choose-an-installation-path).
 
 **Source drift:** `agentic-skill-drift` (read-only) compares each curated skill against its pack source, its reviewed fingerprint in `agentic_env/skill-fingerprints.json`, and upstream at the pinned revision versus upstream today. Its installed comparison covers the canonical managed store, not arbitrary standalone destinations. Vendored adaptations are never drift, because the upstream comparison is upstream-to-upstream. A moved tag, an unreviewed vendored edit, a missing or locally modified install, or an install the skills CLI lockfile attributes to another pack all exit 1. Packs still move only by reviewed tags or vendored updates: re-record the baseline with `--update-baseline` as part of that review, never to silence a finding.
 
-**Routing, not a pipeline.** Small known changes stay direct: implement and exercise the affected path. Core methods apply only to their named job; escalation needs the stated trigger.
+**Routing, not a pipeline.** Small known changes stay direct: implement and exercise the affected path. Core methods apply only to their named job; escalation needs the stated trigger. See the [practical routing guide](guides/skill-routing.md) and [new-project workflow](guides/poteto-workflow.md).
 
 | Job | Core | Escalation → work product |
 |---|---|---|
 | Requirements and interfaces | `grilling`, `grill-with-docs`, `domain-modeling`, `codebase-design` | External facts → `research`; uncertain interaction → `prototype`; multi-session decisions → `wayfinder` |
 | Implementation and bugs | Matt `tdd` when test-first is requested; `diagnosing-bugs` for failures | Lifecycle/shared-state/downstream risk → `blast-radius` executed safety proof |
 | Review | `code-review`: Standards + Spec | Consequential residual uncertainty → `interrogate` independent critique |
-| Understanding | `how`: current mechanism | Historical intent → `why`; unclear explanation → `wait-what`; Matt `teach` for requested personal learning, not course authoring |
+| Understanding | `how`: current mechanism | Historical intent → `why`; mechanism and rationale explained together → pstack `teach`; unclear explanation → `wait-what` |
 | Style | Force-injected ponytail bundle | Requested terse output → caveman; prose cleanup → `unslop`, never globally injected |
 
 Other escalations: `to-spec`/`to-tickets` for durable plans; `handoff` for explicit transfer; `resolving-merge-conflicts` for an active conflict; `improve-codebase-architecture` for report-only surveys; `show-me-your-work` for run audits; `reflect` for costly detours; `recall` for scoped transcripts, not the memory bank. Agent documents use `writing-for-agents`; substantial human-facing material uses `technical-writing`. `wizard` requires approved stages/destinations and human execution, without secret-file inspection.
 
-**Invocation:** all pstack skills are manual-only, as are Matt's `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `teach`, `to-spec`, `to-tickets`, `wait-what`, `wayfinder`, `wizard`. Other Matt methods retain narrow automatic triggers. Explicitly invoked recipes may load named dependencies; role labels grant no invocation or action authority.
+**Invocation:** all pstack skills are manual-only, as are Matt's `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `to-spec`, `to-tickets`, `wait-what`, `wayfinder`, `wizard`. Other Matt methods retain narrow automatic triggers. Explicitly invoked recipes may load named dependencies; role labels grant no invocation or action authority.
 
 **Managed runtime:** `~/.agents/skills` is canonical; Claude and Hermes link to it. OMP loads the Claude root (`enableClaudeUser: true`, `enableAgentsUser: false`) and hides manual skills from its automatic listing, not named loading. Installed Hermes ignores the manual flag and warns on those symlink targets while loading successfully: body guards are behavioral, not enforced hiding. Do not weaken trust to suppress warnings. Standalone copies do not establish these links or enroll another harness in managed discovery, health checks or updates.
 
@@ -136,7 +136,7 @@ Other escalations: `to-spec`/`to-tickets` for durable plans; `handoff` for expli
 
 **Verification:** reuse existing drivers. Create `.agents/skills/verify-<app>` only when needed and prove one mapped feature. Explicit maintenance exercises every mapped feature and edits only the verifier; report product regressions. Ordinary changes check affected paths. OMP discovers project skills; Hermes requires explicit project trust.
 
-**Exclusions:** `implement` adds an unwanted orchestrator/unconditional commit; `bro` duplicates the chosen `wait-what`. Public `tdd`/`teach` remain Matt's; full pstack contracts were not folded into them. Reopen `architect`/`arena` only for expensive competing designs with a design-only stop, and `swarm` only for a needed coverage method—native fan-out is not equivalent. Beta schedulers/retrospectives require maturity and a specific job; principles belong in standards, not another installed pack; duplicate style/interview methods remain excluded. All other unlisted skills need a deliberate adoption decision. Local `graphify` remains outside the packs.
+**Exclusions:** `implement` adds an unwanted orchestrator/unconditional commit; `bro` duplicates the chosen `wait-what`. Public `tdd` remains Matt's, without folding in pstack's contract. Public `teach` uses pstack's engineering explanation through `how`/`why`; Matt's sustained learning workspace is no longer selected or vendored. Reopen `architect`/`arena` only for expensive competing designs with a design-only stop, and `swarm` only for a needed coverage method—native fan-out is not equivalent. Beta schedulers/retrospectives require maturity and a specific job; principles belong in standards, not another installed pack; duplicate style/interview methods remain excluded. All other unlisted skills need a deliberate adoption decision. Local `graphify` remains outside the packs.
 
 Branch creation, commits, pushes, PRs, tracker writes, infrastructure and credential changes need their own authorization. Revisit the roster when a named job lacks a method; complete historical rationales remain in [the prior contract](https://github.com/MihaiA24/.dotfiles/blob/0a827c85d89e3737cca03f20eb5a17c3c1b117fe/agentic-env/DECISIONS_AI_TOOLING.md).
 

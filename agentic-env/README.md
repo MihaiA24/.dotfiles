@@ -5,6 +5,8 @@ Install and maintain an OMP-primary, Hermes-secondary stack.
 - [Decisions](DECISIONS_AI_TOOLING.md): operative policy and wiring.
 - [Stack overview](docs/stack-overview.md): architecture and research index.
 - [Project memory](docs/project-memory-stack.md): per-repo setup.
+- [pstack workflow](guides/poteto-workflow.md): prepare a repository's verifier and use it on changes.
+- [Skill routing](guides/skill-routing.md): choose a skill for the task.
 
 ## Quick usage
 
@@ -182,7 +184,7 @@ Use this runbook when OMP already runs on the host. It refreshes the management 
 
 5. **Start a new OMP session and check discovery.** Ask OMP to read `skill://<selected-name>` and report its name without executing the recipe. Check one selected skill from each installed pack; for Matt/pstack, `writing-for-agents` and `how` are examples if selected. Manual-only skills remain loadable by name even though OMP hides them from automatic discovery.
 
-6. **Test workflows separately.** Successful installation and named loading do not prove end-to-end behavior. Exercise the chosen methods on bounded tasks and keep the actual evidence; do not treat doctor or a drift check as proof of a bug fix, downstream safety, or verifier coverage. See the [recorded verification scope](docs/skills-workflow-recheck-2026-09-21.md).
+6. **Test workflows separately.** Successful installation and named loading do not prove end-to-end behavior. Exercise the chosen methods on bounded tasks and keep the actual evidence; do not treat doctor or a drift check as proof of a bug fix, downstream safety, or verifier coverage. See the [recorded verification scope](docs/skills-workflow-recheck-2026-09-21.md). To start work in a repository, follow the [pstack workflow](guides/poteto-workflow.md) and [skill routing](guides/skill-routing.md) guides.
 
 #### Source drift
 
