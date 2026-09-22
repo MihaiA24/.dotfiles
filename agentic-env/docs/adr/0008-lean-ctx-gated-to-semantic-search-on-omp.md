@@ -9,8 +9,8 @@ Accepted 2026-08-05. Amends ADR-0007's retained-tool list. Supersedes ADR-0002's
 ADR-0007 kept `lean-ctx` tools by measured call share: `ctx_shell` (1,729), `ctx_read` (1,263), `ctx_search` (475), `ctx_execute` (387). Under grilling on 2026-08-05, that criterion failed: **call share is usage, not benefit.** Every retained tool except semantic search has an OMP-native equivalent that absorbs its traffic: `read` (files, URLs, PDFs, directories), `bash`, `grep`, `glob`, `eval`, LSP, `edit`. The native tools are prompt-cache-stable and feed OMP's own anchor snapshot store; the intercepted versions do neither.
 
 Compression, the other claimed benefit, was re-checked and gives OMP no benefit:
-- Payload reduction does not predict billed cost: r = 0.15 over 2,848 billed runs (arXiv:2607.12161).
-- A tool-output compressor can touch at most the ~11.2% new-input slice of the bill; cache reads are 68.6%.
+- Payload reduction does not predict billed cost: r = 0.15 over 2,848 analyzed runs of 2,908 billed (arXiv:2607.12161).
+- A tool-output compressor can touch at most the ~11.2% new-input slice of this host's measured OMP bill; cache reads are 68.6%.
 - Compression on the read→edit path cut patch success from 27/40 to 15/40. Headroom, a tool of the same kind, measured +48.4% billed cost.
 
 So `lean-ctx` can earn its mount only on **capability**, and it has exactly one capability without a native equivalent: semantic (by-meaning) code search, `ctx_search(action=semantic)`.

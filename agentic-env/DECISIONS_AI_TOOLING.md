@@ -59,7 +59,7 @@ Every rejection below names the pre-registered threshold it missed: lean-ctx 1 s
 
 - **Primary harness — OMP.** Installer-enforced, smoke-verified, doctor failure.
 - **Supported agent — Hermes.** Its CLI, skills, MCP config, and health checks are managed; the doctor only warns (`TODO secondary`). It keeps its `codebase-memory-mcp` and `agentmemory` entries (behaviour unmeasured).
-- **Installed agent — Claude Code, Codex.** Latest CLI above the reviewed floor, plus curated skills from the skill store. No MCP config is written or diagnosed; the doctor warns only when the binary is missing.
+- **Installed agent — Claude Code, Codex.** Latest CLI at or above the reviewed floor, plus curated skills from the skill store. No MCP config is written or diagnosed; the doctor warns only when the binary is missing.
 
 #### Secondary agents TODO (closed 2026-09-02)
 
@@ -90,7 +90,7 @@ Every rejection below names the pre-registered threshold it missed: lean-ctx 1 s
 ### 4. Memory — Mnemopi + retention canary (settled 2026-08-19)
 
 - **Decided:** Mnemopi stays the default (user, 2026-08-11); the retention-canary hook covers its one defect.
-- **Why:** recall is good, keyless, and needs zero infra. Stage 1 (08-11): zero-LLM Hindsight won the registered endpoint (decision-recall 1/4 @1,024 tok vs 0/4; cross-project isolation 4/4 PASS). Forensics (08-12) showed Mnemopi's 0/4 was a **silent retention gap**, not a recall failure: zero retains 07-13→08-11 despite correct wiring. A Stage 1b replay on the populated bank reached ≈ parity (1 PASS + 3 PARTIAL; reflect works keyless). The gap differential (08-17) ruled out version, cadence, config, drift, and hooks. The residual defects are opposite. Mnemopi silently loses retention, so the **retention canary was wired 08-18**; Hindsight's defect is recall budget (config). Full data: `docs/memory-backend-research.md`.
+- **Why:** recall is good, keyless, and needs zero infra. Stage 1 (08-11): zero-LLM Hindsight won the registered endpoint (decision-recall 1/4 @1,024 tok vs 0/4; cross-project isolation 4/4 PASS). Forensics (08-12) showed Mnemopi's 0/4 was a **silent retention gap**, not a recall failure, despite correct wiring. A Stage 1b replay on the populated bank reached ≈ parity (1 PASS + 3 PARTIAL; reflect works keyless). The gap differential (08-17) fixed the edges (retention worked through 07-14, was dead 07-19→08-10, and resumed 08-11) and ruled out version, cadence, config, drift, and hooks. The residual defects are opposite. Mnemopi silently loses retention, so the **retention canary was wired 08-18**; Hindsight's defect is recall budget (config). Full data: `docs/memory-backend-research.md`.
 - **Rejected:**
   - agentmemory on OMP: 0 calls in 934 sessions, and ADR-0006 requires a single memory owner. It stays on Hermes.
   - Hindsight: the sole challenger. Cross-project sharing is the one thing Mnemopi structurally cannot do.
@@ -165,10 +165,10 @@ The mandatory contract is the OMP layer. It is installer-enforced (`agentic-conf
 
 ## Upstream watch
 
-These are pre-registered triggers. Nothing here is acted on until its trigger fires. Each is also the **Revisit** line of its layer.
+These are pre-registered triggers. Nothing here is acted on until its trigger fires. Layer triggers repeat that layer's **Revisit** line; the installer, skill-pack, screening, and version-review entries appear only here.
 
 - oh-my-pi #8940 (retain-attempt telemetry) ships → retire the retention canary.
-- OMP major bump → re-verify converge keys against `settings-schema.ts` at the new tag, re-pin, re-run the docker smoke.
+- OMP major bump → re-verify converge keys against `settings-schema.ts` at the new tag, raise the floor, re-run the docker smoke.
 - Hermes installer (2026-09-15, #39): fetched at commit `95d42656` of `NousResearch/hermes-agent` (the bytes reviewed 2026-09-02). It is never fetched from the floating `hermes-agent.nousresearch.com/install.sh`, which drifted 2026-09-13 and turned every acceptance job red. Hermes pin bump → move `HERMES_INSTALL_COMMIT` with it and re-verify the SHA256. `omp.sh/install` and `claude.ai/install.sh` remain floating and hash-pinned; on their first drift, apply the same treatment if the vendor publishes a versioned URL.
 - OMP installer (2026-09-15; re-scoped 2026-09-16): at the pinned SHA, `scripts/install.sh:245` looks up the release on `api.github.com` unauthenticated. The installer now runs without `--ref`, so that lookup is load-bearing rather than redundant. Shared `macos-15` runner IPs exhaust the 60 req/h limit, which yields `curl 403` and a red macOS acceptance job while Debian/Arch pass (six in a row 21:05–21:45 UTC on 2026-09-15). This is not fixable here: `clean-acceptance.sh` forbids credentials in the smoke HOME by contract. Drop this line when upstream honours `GITHUB_TOKEN` or serves an unauthenticated latest-release redirect, and re-verify `OMP_INSTALL_SHA256` then. Until then, a red macOS job with that transcript is a re-run, not a defect.
 - Canary fire-rate on 18.1.x → read at the next read-out; zero fires and #8940 still open = keep.

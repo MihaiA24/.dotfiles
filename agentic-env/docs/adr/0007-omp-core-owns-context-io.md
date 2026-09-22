@@ -11,7 +11,7 @@ Accepted
 
 Meanwhile two independent campaigns, billed by the provider, measured what tools of this kind do to a bill. The mechanism they found applies directly:
 
-- Prompt-cache traffic is ~87% of reconstructed cost. A layer that cannot touch cached re-reads cannot move the bill. (`arXiv:2607.12161`, 2,908 billed Claude Code runs, 103 tasks, 7 repositories, 3 models, hash-frozen holdout.)
+- Prompt-cache traffic (cache writes plus reads) is ~87% of reconstructed cost, about 80% of the actual bill. A layer that cannot touch cached re-reads cannot move the bill. (`arXiv:2607.12161`, 2,908 billed Claude Code runs, 2,848 analyzed, 103 tasks, 7 repositories, 3 models, hash-frozen holdout.)
 - Local payload reduction does not predict end-to-end cost: Pearson r = 0.15. One arm removed 38% of raw tool-output tokens and cost 6.8% *more*.
 - Compression corrupted verbatim edit anchors and cut successful patch application from **27/40 to 15/40**.
 - Headroom, the substitute `lean-ctx` documents, measured **+48.4%** billed cost [+42.3, +55.0]. The penalty was positive in all nine model × effort cells.
@@ -19,13 +19,13 @@ Meanwhile two independent campaigns, billed by the provider, measured what tools
 
 That last pair matters most here, because OMP's edit path is entirely anchor-based. `edit` verifies a four-hex content hash against a per-session snapshot store and recovers stale anchors. A lossy compressor on the read path is exactly the failure mode that was measured.
 
-Tool by tool, `lean-ctx` also duplicates the host. `ctx_read(mode=anchored)` repeats `read`'s `[PATH#TAG]` output. `ctx_patch` repeats `edit`'s hashline ops with its own independent anchors. `ctx_read(map/signatures)` repeats `read`'s structural summary. `ctx_search`/`ctx_glob`/`ctx_tree`/`ctx_shell`/`ctx_expand`/`ctx_url_read` repeat `grep`/`glob`/directory reads/`bash`/`artifact://`/URL reads. `ctx_knowledge` and `ctx_session` are a third memory owner. To do this, it puts eighteen tool schemas in every prompt.
+Tool by tool, `lean-ctx` also duplicates the host. `ctx_read(mode=anchored)` repeats `read`'s `[PATH#TAG]` output. `ctx_patch` repeats `edit`'s hashline ops with its own independent anchors. `ctx_read(map/signatures)` repeats `read`'s structural summary. `ctx_search`/`ctx_glob`/`ctx_tree`/`ctx_shell`/`ctx_expand`/`ctx_url_read` repeat `grep`/`glob`/directory reads/`bash`/`artifact://`/URL reads. `ctx_knowledge` and `ctx_session` are an extra memory owner beside Mnemopi. To do this, it puts eighteen tool schemas in every prompt.
 
 ## Decision
 
 **Revised 2026-07-28, before implementation, on measured usage.** The original decision gated `lean-ctx` to `ctx_compose`, `ctx_explore`, `ctx_overview` and `ctx_delta`. Session telemetry shows that was backwards. Across 152 sessions and 25,182 tool calls, those four account for **115 calls**, while `ctx_shell` (1,729), `ctx_read` (1,263), `ctx_search` (475) and `ctx_execute` (387) account for 3,854. The original list would have removed every tool in use and kept every idle one. It was inferred from a single session in which no `ctx_*` tool happened to be called, then generalised without checking.
 
-The decision now: OMP core owns context I/O, and `read`, `grep`, `glob` and `edit` stay authoritative. `lean-ctx` stays for the tools that carry real traffic. **`ctx_patch` is dropped** (175 calls). It is the one tool that keeps file anchors separate from OMP's snapshot store, on the same path where anchor corruption cut patch application from 27/40 to 15/40. `ctx_knowledge` and `ctx_session` are dropped as a second memory owner (1 call each).
+The decision now: OMP core owns context I/O, and `read`, `grep`, `glob` and `edit` stay authoritative. `lean-ctx` stays for the tools that carry real traffic. **`ctx_patch` is dropped** (175 calls). It is the one tool that keeps file anchors separate from OMP's snapshot store, on the same path where anchor corruption cut patch application from 27/40 to 15/40. `ctx_knowledge` and `ctx_session` are dropped as an extra memory owner beside Mnemopi (1 call each).
 
 ## Considered options
 
@@ -39,4 +39,4 @@ The decision now: OMP core owns context I/O, and `read`, `grep`, `glob` and `edi
 - The `lean-ctx` "Replace Mode (native tools denied)" block in `~/.claude/CLAUDE.md` contradicts this decision and is false on OMP, which does not deny native tools. It must be scoped to the harness where it is true.
 - Cached rereads stay, because `ctx_read` stays. What is given up is the independent anchor path: edits go through OMP `edit`, which verifies its four-hex content hash against the session snapshot store and recovers stale anchors.
 - **The original version of this ADR was wrong in exactly the way this document warns about.** It generalised from one observation instead of measuring. It would have been implemented if the workflow had not been profiled first. The profile is in `AI_CONTEXT_TOOLING_COMPARISON.md` (deleted 2026-08-19; in its git history) under "Your workflow, measured".
-- The biggest cost is elsewhere, and this ADR does not address it: **68.6% of billed cost is cache reads.** No tool in the context-I/O layer can reach that share; compaction, pruning, subagent offloading and shorter sessions can. Optimising context I/O optimises at most 11.2% of the bill.
+- The biggest cost is elsewhere, and this ADR does not address it: **68.6% of billed cost is cache reads** on this host's measured OMP sessions. That local figure counts cache reads only; the ~87% above is the paper's figure for all cache traffic on its benchmark. No tool in the context-I/O layer can reach that share; compaction, pruning, subagent offloading and shorter sessions can. Optimising context I/O optimises at most 11.2% of the bill.

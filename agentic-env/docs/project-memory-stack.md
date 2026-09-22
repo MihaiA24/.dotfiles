@@ -11,7 +11,7 @@ Roles differ by harness:
 | OMP context access | OMP core | Native reads, search, shell, evaluation, and anchored edits | No |
 | OMP narrative memory | Mnemopi | Per-project transcript recall | No; retrieval layer |
 | Structural memory | `codebase-memory-mcp` | Code graph queries: symbols, callers, callees, routes, architecture, impact, dead-code candidates | No; rebuildable cache |
-| Secondary-agent narrative memory | `agentmemory` | Session history and rationale recall for Hermes, Claude Code, and Codex | No; retrieval layer |
+| Hermes narrative memory | `agentmemory` | Session history and rationale recall for Hermes | No; retrieval layer |
 | Plain-text project record | `CONTEXT.md` + `docs/adr/*.md` | Canonical domain language and accepted decisions | Yes |
 
 Rule: if losing a generated store would lose project truth, record the fact in plain text too.
@@ -81,7 +81,7 @@ Examples:
 
 ### `agentmemory`
 
-Use on Hermes, Claude Code, and Codex for narrative recall:
+Use on Hermes for narrative recall:
 
 - why a session changed direction
 - discoveries that may matter later
@@ -116,7 +116,7 @@ Run this when opening a repo for agent work:
 
 1. Ensure `CONTEXT.md` exists.
 2. Ensure `docs/adr/` exists or create it on first ADR.
-3. On OMP, use native context I/O and Mnemopi; on a secondary agent, verify its `agentmemory` wiring (`agentic-stack-doctor` warns on it).
+3. On OMP, use native context I/O and Mnemopi; on Hermes, verify its `agentmemory` wiring (`agentic-stack-doctor` warns on it).
 4. If the codebase-memory litmus passes, index the repo with `codebase-memory-mcp` or enable auto-index.
 5. Ask structural questions through `codebase-memory-mcp` only after that litmus passes.
 6. During `grill-with-docs`, update `CONTEXT.md` immediately when a term is settled.
@@ -126,6 +126,6 @@ Run this when opening a repo for agent work:
 
 - `CONTEXT.md`: keep only current canonical language.
 - ADRs: keep forever; supersede with a new ADR when direction changes.
-- `agentmemory`: keep project sessions for secondary agents and let its lifecycle/decay manage recall quality.
+- `agentmemory`: keep project sessions for Hermes and let its lifecycle/decay manage recall quality.
 - Mnemopi: OMP's sole narrative-memory owner; treat it as transcript recall, not the canonical record.
 - `codebase-memory-mcp`: disposable, rebuildable index. Commit its shared graph artifact only if the team wants faster shared bootstrap.

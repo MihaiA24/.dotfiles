@@ -72,7 +72,7 @@ The review keeps two axes separate: **method value** and **execution compatibili
 
 ## Which skills win each development job
 
-The choices below are source-based expectations for a coding assistant. “Choose” means select for the named task, not run on every request. `Matt/name` and `pstack/name` are comparison notation, **not newly installed aliases or promised invocation syntax**.
+The choices below are source-based expectations for a coding assistant. “Choose” means select for the named task, not run on every request. Prefixes such as Matt `teach` and pstack `teach` name the source pack; they are **not newly installed aliases or promised invocation syntax**.
 
 ### 1. Clarifying what to build: Matt grilling, with domain modeling when needed
 
@@ -328,7 +328,7 @@ The catalogue rates each current skill once. **Primary** means the preferred cho
 
 ### Workflow and utility skills
 
-These 24 registered skills are distinct from the 23 principle files below. Supporting playbooks are part of the execution model, not another 23 equivalent standalone skills.
+These 24 registered skills are distinct from the 23 principle files below. Supporting playbooks are part of the execution model, not additional standalone skills.
 
 | Skill | Selection | Intrinsic value and limits |
 |---|---|---|

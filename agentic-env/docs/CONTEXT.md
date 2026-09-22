@@ -78,7 +78,7 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - _Avoid_: Memory dump, implementation notes
 
 - **Agent MCP configuration**
-  - Global agent config that registers MCP servers for Hermes, OMP, Claude Code, and Codex before an agent session starts.
+  - Global agent config that registers MCP servers for the supported agents, Hermes and OMP, before an agent session starts.
   - _Avoid_: Project memory, skill install
 
 - **Managed MCP entry**
