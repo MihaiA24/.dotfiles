@@ -90,7 +90,7 @@ class InstallSkillsMcpsTests(unittest.TestCase):
             self.assertEqual(agent_selection.unknown, ("ghost",))
 
             skill_names = install_skills_mcps._parse_skill_names(["tdd,wayfinder", "tdd"])
-            self.assertEqual(skill_names.selected, ("tdd", "wayfinder"))
+            self.assertEqual(skill_names, ("tdd", "wayfinder"))
 
     def test_vendored_pack_skills_exist_at_resolved_source(self) -> None:
         """A `./` source must resolve inside the package and carry every

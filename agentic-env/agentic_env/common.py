@@ -62,20 +62,15 @@ def cmd_exists(name: str) -> bool:
     return shutil.which(name) is not None
 
 
-def cmd_works(
-    name: str, args: Iterable[str] = ("--help",), timeout_sec: int = 2
-) -> bool:
-    try:
-        subprocess.run(
-            [name, *args],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=timeout_sec,
-        )
-        return True
-    except Exception:
-        return False
+def split_csv(values: list[str] | None) -> list[str]:
+    """Flatten repeated `--flag a,b` arguments into a list of trimmed values."""
+    parsed: list[str] = []
+    for raw in values or ():
+        for item in raw.split(","):
+            value = item.strip()
+            if value:
+                parsed.append(value)
+    return parsed
 
 
 _VERSION_PATTERN = re.compile(r"(\d+)\.(\d+)\.(\d+)")
@@ -174,14 +169,8 @@ def run(cmd: Iterable[str]) -> None:
     _run(cmd)
 
 
-def run_shell(cmd: str) -> None:
-    _run(["bash", "-lc", cmd])
-
-
-def _is_valid_sha256(value: str | None) -> bool:
-    if not value:
-        return False
-    return len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+def is_valid_sha256(value: str | None) -> bool:
+    return bool(re.fullmatch(r"[0-9a-fA-F]{64}", value or ""))
 
 
 def _fetch_url(url: str, timeout_sec: int) -> bytes:
@@ -208,7 +197,7 @@ def run_remote_script(
         return False
 
     if expected_sha256 is not None:
-        if not _is_valid_sha256(expected_sha256):
+        if not is_valid_sha256(expected_sha256):
             warn(f"{label}: invalid sha256 checksum in contract: {expected_sha256}")
             return False
         actual = hashlib.sha256(payload).hexdigest()
@@ -255,7 +244,7 @@ def install_pinned_binary_archive(
 
     actual = hashlib.sha256(payload).hexdigest()
     if (
-        not _is_valid_sha256(expected_sha256)
+        not is_valid_sha256(expected_sha256)
         or actual.lower() != expected_sha256.lower()
     ):
         warn(f"{label}: release checksum mismatch for {url}")

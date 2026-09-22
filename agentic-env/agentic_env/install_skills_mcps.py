@@ -26,6 +26,7 @@ from .common import (
     run,
     set_verbose,
     skip,
+    split_csv,
     warn,
 )
 from .remote_install_contract import validate_remote_contract
@@ -47,14 +48,6 @@ _MCP_LABELS = {
     "codebase-memory-mcp": "codebase-memory-mcp (project code graph, checksum-pinned binary)",
     "agentmemory": "agentmemory (Hermes memory provider, npm)",
 }
-
-
-def _collect_unique(values: list[str]) -> tuple[str, ...]:
-    out: list[str] = []
-    for value in values:
-        if value not in out:
-            out.append(value)
-    return tuple(out)
 
 
 @dataclass(frozen=True)
@@ -97,11 +90,6 @@ class SkillPackSelection:
 
 
 @dataclass(frozen=True)
-class SkillNameSelection:
-    selected: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class SkillAgentSelection:
     selected: tuple[str, ...]
     unknown: tuple[str, ...]
@@ -110,24 +98,10 @@ class SkillAgentSelection:
 @dataclass(frozen=True)
 class SkillInstallPlan:
     skill_packs: tuple[str, ...]
-    skill_names: SkillNameSelection
+    skill_names: tuple[str, ...]
     skill_agents: SkillAgentSelection
     do_codebase: bool
     do_agentmemory: bool
-
-
-
-def _split_csv(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-
-    parsed: list[str] = []
-    for raw in values:
-        for item in raw.split(","):
-            value = item.strip()
-            if value:
-                parsed.append(value)
-    return parsed
 
 
 def _parse_skill_pack_config(payload: object, path: Path) -> SkillManifest | None:
@@ -207,7 +181,7 @@ def _parse_skill_pack_config(payload: object, path: Path) -> SkillManifest | Non
 
         resolved_aliases = [source_value.lower(), *raw_aliases]
 
-        for alias in _collect_unique(resolved_aliases):
+        for alias in dict.fromkeys(resolved_aliases):
             existing = alias_lookup.get(alias)
             if existing is None:
                 alias_lookup[alias] = canonical_name
@@ -291,7 +265,7 @@ def _parse_skill_packs(values: list[str] | None, manifest: SkillManifest) -> Ski
     unknown: list[str] = []
     aliases = manifest.aliases
 
-    for raw in _split_csv(values):
+    for raw in split_csv(values):
         name = raw.strip().lower()
         if not name:
             continue
@@ -305,19 +279,19 @@ def _parse_skill_packs(values: list[str] | None, manifest: SkillManifest) -> Ski
     return SkillPackSelection(selected=tuple(selected), unknown=tuple(unknown))
 
 
-def _parse_skill_names(values: list[str] | None) -> SkillNameSelection:
+def _parse_skill_names(values: list[str] | None) -> tuple[str, ...]:
     requested: list[str] = []
-    for name in _split_csv(values):
+    for name in split_csv(values):
         if name not in requested:
             requested.append(name)
-    return SkillNameSelection(selected=tuple(requested))
+    return tuple(requested)
 
 
 def _parse_skill_agents(values: list[str] | None) -> SkillAgentSelection:
     selected: list[str] = []
     unknown: list[str] = []
 
-    for raw in _split_csv(values):
+    for raw in split_csv(values):
         value = raw.strip().lower()
         if not value:
             continue
@@ -336,10 +310,6 @@ def _parse_skill_agents(values: list[str] | None) -> SkillAgentSelection:
 
 def _all_skill_agents() -> list[str]:
     return [agent for agent, _, _ in SKILL_AGENTS]
-
-
-def _skill_agent_label(agent: str) -> str:
-    return SKILL_AGENT_CLI_NAMES[agent]
 
 
 def _build_install_plan(
@@ -379,7 +349,7 @@ def _build_install_plan(
     else:
         selected_skill_packs = []
 
-    requested_mcps = [name.lower() for name in _split_csv(args.mcp)]
+    requested_mcps = [name.lower() for name in split_csv(args.mcp)]
     unknown_mcps = [name for name in requested_mcps if name not in _MCP_LABELS]
     if unknown_mcps:
         warn(f"Unknown MCP server(s): {', '.join(unknown_mcps)}")
@@ -446,10 +416,6 @@ def _command_path_on_path(
     return shutil.which(binary, path=search_path)
 
 
-def _command_exists(binary: str) -> bool:
-    return _command_path_on_path(binary) is not None
-
-
 def _should_install_mcp(binary: str, label: str, non_interactive: bool) -> bool:
     if cmd_version_at_least(binary, STACK_VERSION_FLOORS[binary]):
         if not ask(
@@ -457,7 +423,7 @@ def _should_install_mcp(binary: str, label: str, non_interactive: bool) -> bool:
         ):
             skip(f"{label}: at or above the reviewed version")
             return False
-    elif _command_exists(binary):
+    elif cmd_exists(binary):
         warn(f"{label}: below the reviewed version; converging")
     return True
 
@@ -501,11 +467,8 @@ def _install_agentmemory_user_local(package: str) -> bool:
     user_bin_dir.mkdir(parents=True, exist_ok=True)
     shim_path = user_bin_dir / "agentmemory"
     try:
-        shim_path.write_text(
-            f'#!/usr/bin/env sh\nexec "{binary_path}" "$@"\n',
-            encoding="utf-8",
-        )
-        shim_path.chmod(0o755)
+        shim_path.unlink(missing_ok=True)
+        shim_path.symlink_to(binary_path)
     except OSError as exc:
         warn(f"agentmemory: failed to write local shim {shim_path}: {exc}")
         return False
@@ -517,14 +480,6 @@ def _install_agentmemory_user_local(package: str) -> bool:
         warn('Example: export PATH="$HOME/.local/bin:$PATH"')
         return False
 
-    if str(user_bin_dir) not in os.environ.get("PATH", "").split(os.pathsep):
-        os.environ["PATH"] = str(user_bin_dir) + (
-            os.pathsep + os.environ.get("PATH", "")
-            if os.environ.get("PATH", "")
-            else ""
-        )
-        skip("PATH updated for this process")
-        skip('Persist with: export PATH="$HOME/.local/bin:$PATH"')
 
     ok(f"agentmemory: installed to user-local npm prefix {local_prefix}")
     ok(f"agentmemory command resolved at: {resolved_path}")
@@ -551,7 +506,6 @@ def _install_npm_global(package: str, label: str) -> bool:
         return _install_agentmemory_user_local(package)
 
 
-
 def _configure_hermes_agentmemory() -> bool:
     return (
         configure_agent_mcps.main(
@@ -566,8 +520,6 @@ def _configure_hermes_agentmemory() -> bool:
         )
         == 0
     )
-
-
 
 
 def _resolve_pack_skills(
@@ -678,7 +630,7 @@ def _install_skill_package(
     for skill in skills:
         command.extend(["--skill", skill])
     for skill_agent in skill_agents:
-        command.extend(["--agent", _skill_agent_label(skill_agent)])
+        command.extend(["--agent", SKILL_AGENT_CLI_NAMES[skill_agent]])
 
     if skills:
         info(f"Installing skills: {', '.join(skills)} from {source}...")
@@ -839,7 +791,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     selected_skill_packs = list(plan.skill_packs)
-    requested_skill_names = list(plan.skill_names.selected)
+    requested_skill_names = list(plan.skill_names)
     selected_skill_agents = list(plan.skill_agents.selected) or _all_skill_agents()
 
     skill_selection = _resolve_pack_skills(manifest, selected_skill_packs, requested_skill_names)
