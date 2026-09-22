@@ -10,7 +10,7 @@ Vendoring preserves local adaptations. Upstream has no tags, but the skills CLI 
 
 ## Local adaptations
 
-All twelve remain manual-only: metadata plus description/body guards, allowing named composition under an explicitly invoked recipe. Hermes ignores the metadata gate. Cursor-specific loading, delegation, model slugs and transcript paths are replaced with OMP/Hermes equivalents. Read-only means an actual restricted tool grant; otherwise investigate in the parent or supply frozen input to tool-less reviewers.
+All twelve remain manual-only through metadata plus description/body guards, which still allow named composition under an explicitly invoked recipe. Hermes ignores the metadata gate. OMP/Hermes equivalents replace Cursor-specific loading, delegation, model slugs and transcript paths. Read-only means an actual restricted tool grant; otherwise investigate in the parent or supply frozen input to tool-less reviewers.
 
 | Methods | Changes to preserve |
 |---|---|
