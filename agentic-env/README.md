@@ -8,7 +8,7 @@ Install and maintain an OMP-primary, Hermes-secondary stack.
 
 ## Quick usage
 
-Requires Python 3.12+, Node.js 20+/npm, uv, curl, git, CA certificates, shell/archive utilities, C/C++ build tools and the dotfiles checkout.
+The full stack targets macOS/Linux and requires Python 3.12+, Node.js 20+/npm, uv, curl, git, CA certificates, shell/archive utilities, C/C++ build tools and the dotfiles checkout. For Windows or an offline copy, the [Python-only copier](#python-only-copy-on-windows) needs only Python and the checkout.
 
 ```bash
 cd /path/to/your/dotfiles/agentic-env
@@ -73,6 +73,24 @@ Choose **one** installation command above. The normal `--skill-pack`, `--skill-p
 Existing skill names—including symlinks—are refused before any package is copied; unrelated destination files are preserved. To refresh, install into a new directory and compare with your local changes before replacing them. These are standalone copies, not linked to the checkout or registered for global skills updates.
 
 The example uses Devin for Terminal's `.devin/skills` layout. Set the directory your harness actually discovers. Skill bodies remain unchanged: OMP/Hermes-specific tools and delegation instructions may need adaptation, and copying them does not verify execution in another harness.
+
+#### Python-only copy on Windows
+
+This standalone fallback requires only Python 3.12+ and the checkout: no uv, npm, third-party Python packages, downloads, agent installation or MCP configuration. It runs without prompts.
+
+```powershell
+# From the dotfiles checkout; choose ONE command.
+py -3 agentic-env\agentic_env\copy_skills.py --skills-dir "C:\work\project\.devin\skills"
+
+# Or copy only these vendored skills.
+py -3 agentic-env\agentic_env\copy_skills.py --skills-dir "C:\work\project\.devin\skills" --skill "tdd,code-review"
+```
+
+On macOS/Linux, use `python3 agentic-env/agentic_env/copy_skills.py` with the same options and a native destination path.
+
+By default it copies the **30 vendored Matt/pstack skills**, including scripts and references, and lists the **8 remote-only caveman/ponytail skills it did not copy**. The existing manifest owns this roster. `--skill` accepts comma-separated or repeated names; requesting an unavailable skill fails before copying anything.
+
+The destination is the exact skills folder, not the project root. Existing skill names (including dangling symlinks) are refused before any copying; unrelated files are preserved. This is file copying only: Bash assets and OMP/Hermes-specific instructions are not converted into Windows-compatible workflows.
 
 #### Refresh skills on an existing OMP host
 

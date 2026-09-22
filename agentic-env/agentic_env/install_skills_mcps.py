@@ -33,6 +33,7 @@ from .common import (
     split_csv,
     warn,
 )
+from .copy_skills import copy_skill_packages
 from .remote_install_contract import validate_remote_contract
 from .stack_metadata import (
     AGENTMEMORY_NPM_PACKAGE,
@@ -719,21 +720,9 @@ def _install_skill_directory(
                 ):
                     return False
             packages = sorted((staging / ".agents" / "skills").iterdir())
-            if not packages:
-                warn("The skills CLI did not install any packages")
-                return False
-            # Check every collision before copying anything; never follow an existing
-            # skill symlink or overwrite another harness's local edits.
-            for package in packages:
-                target = destination / package.name
-                if target.exists() or target.is_symlink():
-                    warn(f"{target}: already exists; choose a destination without this skill")
-                    return False
-            destination.mkdir(parents=True, exist_ok=True)
-            for package in packages:
-                shutil.copytree(package, destination / package.name)
+            copy_skill_packages(packages, destination)
             ok(f"Installed skill packages: {len(packages)} in {destination}")
-    except (OSError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         warn(f"Directory skill installation failed: {exc}")
         return False
     return True
