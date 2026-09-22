@@ -1,14 +1,14 @@
 # Start a new repo with the selected pstack skills
 
-Use this guide to prepare an existing OMP host, then give an agent a reliable way to work in another repository. It adapts Lauren Tan's [Complete Guide to pstack, Part 1](https://x.com/poteto/status/2094457600259842065) (verification) and [Part 2](https://x.com/poteto/status/2097732320606507506) (understanding and design) to [our selected skills](../DECISIONS_AI_TOOLING.md#6-skills). It does not install full pstack or recreate Cursor's cloud services.
+Prepare this OMP host, then set up verification in the target repository. This guide adapts Lauren Tan's [Complete Guide to pstack, Part 1](https://x.com/poteto/status/2094457600259842065) on verification and [Part 2](https://x.com/poteto/status/2097732320606507506) on understanding and design to [our selected skills](../DECISIONS_AI_TOOLING.md#6-skills).
 
-The starting sequence is: make one user path runnable, create or reuse its verifier, prove the verifier works, then use it while changing the app. Add investigation and design methods only when the task needs them. [Choose a skill for the job](skill-routing.md) says which method fits which task.
+Host preparation comes first. The rest follows the articles' order: build reliable verification, map and maintain it, use it on changes, then add understanding and design methods. Optional cloud services and unselected skills are identified where the articles introduce them. This is not a skill chain to run for every task.
 
-## 1. Prepare this host once
+## Before you start
 
-OMP already runs on this host. Use the [managed skills refresh](../README.md#refresh-skills-on-an-existing-omp-host), not full bootstrap. Preserve any intentional edits to installed skills before refreshing them.
+### Refresh the host's skills
 
-Run these commands yourself when ready. The installation command replaces selected installed packages.
+OMP already runs on this host. Use the [managed skills refresh](../README.md#refresh-skills-on-an-existing-omp-host), not full bootstrap. Preserve intentional edits to installed skills before replacing them.
 
 ```bash
 cd "$HOME/.dotfiles/agentic-env"
@@ -18,9 +18,9 @@ agentic-stack-doctor
 agentic-skill-drift --no-upstream
 ```
 
-This installs the curated profile using the default Hermes, Claude, and Codex targets without selecting MCP installation. Claude's skill links provide OMP discovery; Codex populates the canonical store. There is no `--skill-agent omp`.
+The command installs the curated profile for Hermes, Claude, and Codex, but no MCPs. OMP reads Claude's skill links; Codex populates the canonical store. There is no `--skill-agent omp`.
 
-Check that the existing `skills` mapping in `~/.omp/agent/config.yml` contains these fields. Do not replace the rest of the configuration.
+Check the `skills` mapping in `~/.omp/agent/config.yml`. Keep the rest of the configuration intact.
 
 ```yaml
 skills:
@@ -28,11 +28,11 @@ skills:
   enableAgentsUser: false
 ```
 
-Inspect failures before proceeding. `foreign:<source>` means recorded installation provenance disagrees; it does not necessarily mean different content. `--no-upstream` checks reviewed sources and installed packages without checking upstream freshness. Do not clear findings with `--update-baseline`. Doctor and drift are installation checks, not proof that an application works.
+Inspect failures before proceeding. `foreign:<source>` reports a provenance mismatch, not necessarily different content. `--no-upstream` compares reviewed sources and installed packages without checking upstream freshness. Do not clear findings with `--update-baseline`. Doctor and drift check the installation, not whether an app works.
 
-## 2. Open the target repo and check discovery
+### Open the target repository
 
-Replace the example path with the new repository's root, then start a fresh session:
+Replace the example path with the repository's root and start a fresh session:
 
 ```bash
 cd /path/to/new-repo
@@ -47,29 +47,23 @@ skill://how, and skill://teach. Report whether each loads. Do not execute
 the skills yet.
 ```
 
-The shared skills are already installed on the host. Do not copy the whole catalog into every repository. Keep app-specific verification knowledge in the target repo's `.agents/skills/` directory.
+The shared skills are installed on the host. Keep only app-specific verification knowledge in the repo's `.agents/skills/` directory; do not copy the whole catalog into each repository.
 
-The selected pstack skills are manual-only, so explicitly invoke them when needed. OMP hides them from automatic discovery but still loads them by name. Invoking a recipe also authorizes the skills it names: `/teach` can call `/how` and `/why` without a second request. Merely checking discovery, as above, does not invoke the recipe. `/teach` is the adapted pstack explanation skill. It explains engineering work to you and does not change code or build a learning workspace. `/poteto-mode`, `/architect`, and `/swarm` are excluded from this stack, so they are not available.
+Pstack skills are manual-only. OMP hides them from automatic discovery but loads them by name. Invoking `/teach` authorizes its named `/how` and `/why` calls. Checking discovery, as above, does not invoke a recipe. `/teach` explains engineering work without changing code or creating a learning workspace.
 
-## 3. Establish a runnable starting point
+### Check that the app runs
 
-For an existing app, first locate its project instructions, documented run command, existing verification tooling, and any project-local verifier. Use a narrow question if you need help understanding it:
+Locate the project instructions, run command, existing drivers, and any project-local verifier. Reuse a working verifier. If its commands or map have drifted, use the maintenance step below.
 
-```text
-/how does a user complete the app's main task? Identify the relevant code,
-how to run it, and the existing way to exercise that user path.
-Explain briefly. Do not refactor anything.
-```
+For an empty repo, first build and run the smallest useful user path. Do not map planned features. For an existing app that will not start, resolve or report that failure before writing verification instructions.
 
-If a usable verifier already exists, read and exercise it instead of generating another. If its map or commands have drifted, go to step 7.
+Use disposable data, test accounts, and isolated ports or profiles. Production data, credentials, infrastructure, and global runtime settings require separate authorization.
 
-For an empty repository, first build and run the smallest useful user path. There is no app to catalog yet. Do not generate a feature map for planned features. For a broken existing app, resolve or report the startup failure before writing verification instructions against it.
+## Part 1: establish verification
 
-Choose disposable data, test accounts, and isolated ports or profiles. Do not use production data or change credentials, infrastructure, or global runtime settings without separate authorization.
+### 1. Create the project verifier
 
-## 4. Create and prove the project verifier
-
-When a runnable app has no usable project verifier, prompt:
+Lauren starts with `/create-verification-skill`. Once the app runs, invoke it if no usable verifier exists:
 
 ```text
 /create-verification-skill for this repository. Reuse its existing runner
@@ -80,44 +74,30 @@ action and resulting state, clean up what you started, and confirm the
 evidence survives. Do not commit, push, or change global configuration.
 ```
 
-Expect `.agents/skills/verify-<app>/SKILL.md` and a `features/README.md` index with feature files. The agent chooses a real app-specific name; `verify-<app>` is not a literal command. Start with the main three to five features, or fewer if that is all the app has.
+Expect `.agents/skills/verify-<app>/SKILL.md`. The agent chooses an app-specific name; `verify-<app>` is not a literal command.
 
-Before accepting the result, check that:
+### 2. Make verification reproducible
 
-- Launch, readiness checks, driving commands, evidence paths, and cleanup describe this app and actually work.
-- Each mapped feature explains what users do, how the agent drives it, and what observable result proves success.
-- The agent exercised one real user path and checked its side effects, not only mocks or internal setters.
-- Cleanup removed only the run's temporary state and processes. The proof artifacts still exist.
+The article next develops the app-driving tools and development environment. Reuse the project's runner and drivers before adding a CLI. Check that:
+
+- The launch, readiness, drive, evidence, and cleanup instructions match commands the agent ran successfully.
+- The agent exercised a real user path and checked its side effects, not only mocks or internal setters.
+- Cleanup removed only the run's temporary state and processes. The evidence files still exist.
 - A fresh OMP session can load the generated skill by its actual name.
 
-One proved feature establishes the initial verifier, not full feature coverage. Record which other features remain unexercised. A document that was never executed is not a finished verifier.
+Hermes requires explicit human trust for project-skill discovery. Follow the generated skill's handoff; do not let the agent grant trust or weaken runtime settings on your behalf.
 
-If using Hermes instead, project-skill discovery requires explicit human trust. Follow the generated skill's handoff; do not let the agent grant trust or weaken runtime settings on your behalf.
+The article discusses Cloud Agents next, after successful local verification and a few delivered changes. This is an optional scaling step, not a requirement before continuing. Cursor Cloud Agents require separate adoption and setup. Local subagents do not provide that infrastructure.
 
-## 5. Use the verifier on the first real change
+### 3. Map the app's existing features
 
-Replace `[verifier]` with the generated skill name and name one concrete task:
+The generated `features/README.md` indexes the feature files. Start with the main three to five features, or fewer if that is all the app has. Each entry should explain what users do, how the agent drives it, and which result proves success.
 
-```text
-Implement [small feature or fix]. Use /[verifier] to exercise the affected
-user path and show the action, resulting state, and relevant side effects.
-For a bug, demonstrate the failure before the fix and the same path working
-afterward. Keep the change focused. Do not commit or push.
-```
+One proved feature establishes the initial verifier, not full-map coverage. Record which features remain unexercised. Written instructions alone do not prove that verification works.
 
-For a UI, ask for screenshots or video of the interaction. For a CLI, ask for the invocation, terminal output, exit status, and files it changed. For a service, ask for requests, responses, and relevant stored state. For performance work, capture a baseline and compare the same scenario afterward.
+### 4. Keep the verifier useful
 
-Keep useful regression tests, but do not accept a passing test suite as a substitute for exercising the changed behavior. Update affected verifier instructions when the intended behavior changes. Do not run the entire maintenance pass for every small change.
-
-## 6. Add other methods only when the task needs them
-
-Most changes need nothing beyond the verifier. When a task does need a method, pick it with [Choose a skill for the job](skill-routing.md). That guide covers ambiguous reports, explanation, history, goals, prototypes, interface design, critique, and planning, with a prompt for each.
-
-Keep this workflow's proof rule across those routes. When a prototype, spec slice, or ticket needs proof, name `/[verifier]` and ask for the action and the observable result. An explanation, a plan, or a review is not evidence that the app works.
-
-## 7. Keep the verifier useful
-
-After substantial app changes, or when its instructions no longer match reality, prompt:
+Lauren introduces maintenance alongside the feature map and recommends running it daily. Choose a cadence that matches how often the app changes. After substantial changes, or when the instructions no longer match the app, run:
 
 ```text
 /maintain-verification-skill for .agents/skills/[verifier].
@@ -127,6 +107,53 @@ regressions separately. Preserve evidence and report any blocked coverage.
 Do not commit or push.
 ```
 
-Lauren recommends daily maintenance. Choose a cadence appropriate to the project's rate of change; installing the skill does not create a schedule. Prove the manual loop before adding scheduled runs or feedback-channel automation. Parallel source readers are useful, but agents must not simultaneously drive one shared app instance.
+Source readers may work in parallel. Agents must drive a shared app instance serially. Full maintenance is separate from the affected-path checks for an ordinary change.
 
-Once this loop works, consider additional scale only for a measured need. Cursor Cloud Agents require separate adoption and setup, and pstack's `swarm` is excluded from this stack. Local subagents are not equivalent infrastructure or verification coverage.
+### 5. Use the verifier on real changes
+
+The article then shows feature work, performance work, and report reproduction. Replace `[verifier]` with the generated skill name and name one concrete task:
+
+```text
+Implement [small feature or fix]. Use /[verifier] to exercise the affected
+user path and show the action, resulting state, and relevant side effects.
+For a bug, demonstrate the failure before the fix and the same path working
+afterward. Keep the change focused. Do not commit or push.
+```
+
+For a UI, ask for screenshots or video of the interaction. For a CLI, ask for the invocation, terminal output, exit status, and changed files. For a service, ask for requests, responses, and relevant stored state. For performance work, capture a baseline and compare the same scenario afterward.
+
+Keep useful regression tests, but also exercise the changed behavior. Update affected verifier instructions when intended behavior changes.
+
+The article uses `/poteto-mode` to coordinate work and `/swarm` for repeated verification across cloud agents. Neither is selected here. Invoke the verifier directly; local fan-out is not equivalent to `swarm` coverage.
+
+Automated report reproduction comes after reliable manual verification. Scheduled runs and feedback-channel automation need separate setup and authorization. Installing a skill does not create either.
+
+## Part 2: understand the problem, then design
+
+### 6. Restate the problem and build a mental model
+
+Ask the agent to restate an ambiguous report in plain English before proposing a fix. Use `/teach` to explain the work through `/how` and `/why`. A narrow mechanism question can use `/how` alone:
+
+```text
+/how does a user complete the app's main task? Identify the relevant code,
+how to run it, and the existing way to exercise that user path.
+Explain briefly. Do not refactor anything.
+```
+
+Lauren then introduces `/recall` for relevant work from earlier conversations. Use it when that history exists, not as a prerequisite in an empty workspace.
+
+### 7. Work backwards from the caller's experience
+
+For shared code or a package, use `/technical-writing` to draft a tutorial showing how callers will use it before choosing the implementation. Edit the draft with `/unslop`. Our selected `/codebase-design` can help assess the interface.
+
+### 8. Answer design questions with prototypes
+
+Next, test uncertain interactions or state models in code. Drive the prototypes with the verifier and compare observed results. Our Matt `/prototype` is available for this job; the article's `/poteto-mode` prototyping playbook is not.
+
+The article then introduces `/architect` for larger, competing designs. That skill is not selected here. `/codebase-design` supports interface design, but does not reproduce the full architecture workflow.
+
+### 9. Write an execution plan only when needed
+
+Lauren turns a settled design into a plan after investigation and experiments. Use `/to-spec` or `/to-tickets` when work needs coordination across sessions or people. Each slice should name a `/[verifier]` action and its observable result. Approve tracker publication separately.
+
+For a small change you already understand, implement and verify it directly. [Choose a skill for the job](skill-routing.md) provides prompts for these routes without making them mandatory stages.
