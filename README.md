@@ -50,19 +50,16 @@ Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./se
 | Powerlevel10k fonts (Linux) | See `install_p10k_fonts_linux()` in the script |
 
 
-## Agentic environment bootstrap
+## Agentic environment and skill installation
 
-The agent tooling stack can be installed and validated from a fresh container using
-the `agentic-env` compose smoke-test setup.
+Choose the [installation route](./agentic-env/README.md#choose-an-installation-path) for the task:
 
-- See [`agentic-env/README.md`](./agentic-env/README.md) for:
-  - build/run instructions
-  - fresh-install smoke contract
-  - image-size/tradeoff rationale and compatibility notes
-- CI gate:
-  - `.github/workflows/agentic-env-smoke-test.yml` runs fresh-install smoke checks on:
-    - `push` / `pull_request` for changes under `agentic-env/`
-    - `workflow_dispatch` / UI **Run workflow** for manual trigger
-- Design decision log:
-  - [`agentic-env/docs/CONTEXT.md`](./agentic-env/docs/CONTEXT.md)
-  - [`agentic-env/docs/adr/0001-container-base-for-fresh-agent-installs.md`](./agentic-env/docs/adr/0001-container-base-for-fresh-agent-installs.md)
+- **Full agent stack, macOS/Linux:** [bootstrap and prerequisites](./agentic-env/README.md#quick-usage), then the [clean-platform acceptance runbook](./agentic-env/README.md#clean-platform-acceptance).
+- **Existing OMP host:** [refresh managed skills](./agentic-env/README.md#refresh-skills-on-an-existing-omp-host) without reinstalling agents or MCPs.
+- **Another harness's directory:** [copy selected curated packs](./agentic-env/README.md#install-into-another-harnesss-directory) with the native skills CLI.
+- **Windows or offline copying:** [Python-only runbook](./agentic-env/README.md#python-only-copy-on-windows), using the vendored packages; this does not provision the Windows agent stack.
+- **Existing standalone copies:** [verify and refresh safely](./agentic-env/README.md#verify-and-refresh-standalone-copies); global doctor, drift and update commands do not manage these destinations.
+
+The [CI workflow](./.github/workflows/agentic-env-smoke-test.yml) runs full-stack macOS/Linux acceptance and a separate Windows copier-only check on relevant pushes/PRs, or through **Run workflow**. [Recorded evidence](./agentic-env/README.md#ci-and-recorded-evidence) names the scope of each result.
+
+Policy: [operative decisions](./agentic-env/DECISIONS_AI_TOOLING.md), [domain vocabulary](./agentic-env/docs/CONTEXT.md), and [ADRs](./agentic-env/docs/adr/).
