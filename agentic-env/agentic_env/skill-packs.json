@@ -2,7 +2,8 @@
   "packs": [
     {
       "name": "mattpocock",
-      "source": "mattpocock/skills#v1.2.3",
+      "source": "./vendored/mattpocock/skills",
+      "note": "reviewed c55ee46073ed923f86ce59a5eb3b6d895095d1b7 with documented OMP/Hermes adaptations; see vendored/mattpocock/UPSTREAM.md",
       "label": "mattpocock skills",
       "aliases": [
         "mattpocock",
@@ -23,7 +24,11 @@
         { "name": "teach", "description": "Teach a skill or concept inside this workspace" },
         { "name": "handoff", "description": "Compact the conversation into a handoff document" },
         { "name": "resolving-merge-conflicts", "description": "Resolve an in-progress merge or rebase conflict" },
-        { "name": "diagnosing-bugs", "description": "Diagnosis loop for hard bugs and performance regressions" }
+        { "name": "diagnosing-bugs", "description": "Diagnosis loop for hard bugs and performance regressions" },
+        { "name": "writing-for-agents", "description": "How to write skills, AGENTS.md, and docs an agent reads" },
+        { "name": "improve-codebase-architecture", "description": "Report deepening opportunities, then grill the one you pick" },
+        { "name": "wizard", "description": "Generate a bash wizard for a manual procedure" },
+        { "name": "wait-what", "description": "Ask for the last message to be re-pitched in plain terms" }
       ]
     },
     {
@@ -42,7 +47,7 @@
     {
       "name": "pstack",
       "source": "./vendored/pstack/skills",
-      "note": "vendored copy of cursor/plugins pstack (see vendored/pstack/UPSTREAM.md); the repo publishes no tags and the skills CLI clones by branch only",
+      "note": "reviewed vendored packages with documented OMP/Hermes adaptations; see vendored/pstack/UPSTREAM.md",
       "label": "pstack skills",
       "aliases": [
         "pstack",
@@ -55,6 +60,8 @@
         { "name": "interrogate", "description": "Adversarial multi-model review that hunts blind spots" },
         { "name": "unslop", "description": "Cut AI tells from any writing" },
         { "name": "create-verification-skill", "description": "Generate a project-local skill that drives your app like a user" },
+        { "name": "maintain-verification-skill", "description": "Periodic pass that keeps a verification skill and its feature map honest" },
+        { "name": "technical-writing", "description": "Diataxis structure and plain-sentence rules for human-facing docs" },
         { "name": "show-me-your-work", "description": "TSV decision log for long or unattended runs" },
         { "name": "reflect", "description": "Review the transcript and route learnings into skill edits" },
         { "name": "recall", "description": "Rebuild recent working context into a current-state brief" }
