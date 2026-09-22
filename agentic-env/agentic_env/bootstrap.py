@@ -5,14 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
-import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Final, Literal
 
 from . import configure_agent_mcps, install_agents, install_skills_mcps, stack_doctor
-from .common import ok, set_verbose, skip, warn
+from .common import interactive, ok, set_verbose, skip, warn
 from .stack_metadata import CONFIGURE_AGENT_CHOICES, SKILL_AGENTS, SKILL_AGENT_LOOKUP
 
 
@@ -96,6 +95,14 @@ def _parse(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Skill-pack profile name for install-skills-mcps phase. "
             f"Defaults to '{_DEFAULT_SKILL_PROFILE}'."
+        ),
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help=(
+            "Let the two install phases prompt with their checkbox pickers instead of "
+            "installing every CLI and the --skill-profile packs."
         ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Show the commands that would run and exit.")
@@ -192,14 +199,18 @@ def _bootstrap_plan(args: argparse.Namespace) -> list[BootstrapPhase] | None:
     if skill_agents is None:
         return None
 
-    install_args = ["--all", "--yes"]
+    if args.interactive:
+        install_args = []
+        skill_args = []
+        for skill_agent in _split_csv(args.skill_agent):
+            skill_args.extend(["--skill-agent", skill_agent])
+    else:
+        install_args = ["--all", "--yes"]
+        skill_args = ["--all-mcps", "--yes", "--skill-profile", args.skill_profile]
+        for skill_agent in skill_agents:
+            skill_args.extend(["--skill-agent", skill_agent])
     if args.verbose:
         install_args.append("--verbose")
-
-    skill_args = ["--all-mcps", "--yes", "--skill-profile", args.skill_profile]
-    for skill_agent in skill_agents:
-        skill_args.extend(["--skill-agent", skill_agent])
-    if args.verbose:
         skill_args.append("--verbose")
 
     configure_args = ["--yes"]
@@ -400,6 +411,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.skill_profile.strip():
         warn("--skill-profile must not be empty")
+        return 1
+
+    if args.interactive and not args.dry_run and not interactive():
+        warn("--interactive needs a terminal")
         return 1
 
     plan = _bootstrap_plan(args)

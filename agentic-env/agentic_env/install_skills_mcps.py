@@ -10,16 +10,18 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import configure_agent_mcps
 from .common import (
+    Option,
     ask,
     choose,
     cmd_exists,
     cmd_version_at_least,
     install_pinned_binary_archive,
     info,
+    interactive,
     ok,
     run,
     set_verbose,
@@ -41,6 +43,10 @@ from .stack_metadata import (
 
 _REMOTE_INSTALL_CONTRACT = SKILLS_INSTALL_REMOTE_CONTRACT
 _SKILL_PACK_CONFIG_PATH = Path(__file__).with_name("skill-packs.json")
+_MCP_LABELS = {
+    "codebase-memory-mcp": "codebase-memory-mcp (project code graph, checksum-pinned binary)",
+    "agentmemory": "agentmemory (Hermes memory provider, npm)",
+}
 
 
 def _collect_unique(values: list[str]) -> tuple[str, ...]:
@@ -57,6 +63,7 @@ class SkillPack:
     source: str
     label: str
     skills: tuple[str, ...]
+    descriptions: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -174,13 +181,20 @@ def _parse_skill_pack_config(payload: object, path: Path) -> SkillManifest | Non
             return None
 
         skill_values: list[str] = []
+        skill_descriptions: dict[str, str] = {}
         for raw_skill in skills_payload:
-            if not isinstance(raw_skill, str):
+            if isinstance(raw_skill, str):
+                skill, description = raw_skill.strip(), ""
+            elif isinstance(raw_skill, dict) and isinstance(raw_skill.get("name"), str):
+                skill = raw_skill["name"].strip()
+                description = str(raw_skill.get("description", "")).strip()
+            else:
                 warn(f"Invalid skill value for pack '{name}' in {path}: {raw_skill!r}")
                 return None
-            skill = raw_skill.strip()
             if skill and skill not in skill_values:
                 skill_values.append(skill)
+                if description:
+                    skill_descriptions[skill] = description
 
         raw_aliases: list[str] = []
         for raw_alias in aliases_payload:
@@ -208,6 +222,7 @@ def _parse_skill_pack_config(payload: object, path: Path) -> SkillManifest | Non
             source=source_value,
             label=label_value,
             skills=tuple(skill_values),
+            descriptions=skill_descriptions,
         )
 
     profiles_payload = payload.get("profiles", {"default": list(packs)})
@@ -364,34 +379,59 @@ def _build_install_plan(
     else:
         selected_skill_packs = []
 
+    requested_mcps = [name.lower() for name in _split_csv(args.mcp)]
+    unknown_mcps = [name for name in requested_mcps if name not in _MCP_LABELS]
+    if unknown_mcps:
+        warn(f"Unknown MCP server(s): {', '.join(unknown_mcps)}")
+        warn(f"Available: {', '.join(_MCP_LABELS)}")
+        return None
+
     return SkillInstallPlan(
         skill_packs=tuple(selected_skill_packs),
         skill_names=skill_names,
         skill_agents=selected_skill_agents,
-        do_codebase=bool(args.all_mcps),
-        do_agentmemory=bool(args.all_mcps),
+        do_codebase=bool(args.all_mcps) or "codebase-memory-mcp" in requested_mcps,
+        do_agentmemory=bool(args.all_mcps) or "agentmemory" in requested_mcps,
     )
 
 
-def _pick_skills(manifest: SkillManifest) -> dict[str, list[str]]:
-    """One checkbox row per skill, grouped by pack; returns pack -> skill filter
-    ([] = the entire pack). Rows are pre-checked from the `default` profile."""
+def _pick_skills(manifest: SkillManifest, requested: list[str]) -> dict[str, list[str]]:
+    """One row per skill under a pack heading, plus a row that takes the whole pack.
+
+    Returns pack -> skill filter, where an empty filter installs whatever the pack
+    ships. Without `--skill` the pre-checked rows are the whole packs of the
+    `default` profile; with it, only the matching skill rows start checked.
+    """
     default_packs = manifest.profiles.get("default")
-    rows: list[tuple[str, str, bool] | str] = []
+    rows: list[Option | str] = []
     for pack in manifest.packs.values():
-        checked = default_packs is None or pack.name in default_packs
+        in_default = default_packs is None or pack.name in default_packs
+        count = f" ({len(pack.skills)} skills)" if pack.skills else ""
         rows.append(pack.label)
-        if pack.skills:
-            rows.extend((f"{pack.name}/{skill}", skill, checked) for skill in pack.skills)
-        else:
-            rows.append((f"{pack.name}/", f"{pack.label} (entire pack)", checked))
+        rows.append(
+            Option(f"{pack.name}/", f"All of {pack.label}{count}", in_default and not requested)
+        )
+        rows.extend(
+            Option(
+                f"{pack.name}/{skill}",
+                skill,
+                in_default and skill in requested,
+                pack.descriptions.get(skill),
+            )
+            for skill in pack.skills
+        )
 
     selection: dict[str, list[str]] = {}
-    for value in choose("Select skills to install", rows, non_interactive=False):
+    whole_packs: list[str] = []
+    for value in choose("Select skills to install", rows):
         pack_name, _, skill = value.partition("/")
         skills = selection.setdefault(pack_name, [])
-        if skill:
+        if not skill:
+            whole_packs.append(pack_name)
+        elif skill not in skills:
             skills.append(skill)
+    for pack_name in whole_packs:
+        selection[pack_name] = list(manifest.packs[pack_name].skills)
     return selection
 
 
@@ -550,6 +590,67 @@ def _resolve_pack_skills(
     return selection
 
 
+def _summarize_selection(
+    manifest: SkillManifest,
+    selection: dict[str, list[str]],
+    skill_agents: list[str],
+    do_codebase: bool,
+    do_agentmemory: bool,
+) -> None:
+    for name, skills in selection.items():
+        pack = manifest.packs[name]
+        if not skills:
+            detail = "everything the pack ships"
+        elif tuple(skills) == pack.skills:
+            detail = f"whole pack ({len(skills)} skills)"
+        else:
+            detail = ", ".join(skills)
+        info(f"{pack.label}: {detail}")
+    if selection:
+        info(f"Skill target agents: {', '.join(skill_agents)}")
+    for name, wanted in (("codebase-memory-mcp", do_codebase), ("agentmemory", do_agentmemory)):
+        if wanted:
+            info(f"MCP server: {name}")
+
+
+def _replay_command(
+    manifest: SkillManifest,
+    selection: dict[str, list[str]],
+    skill_agents: list[str],
+    do_codebase: bool,
+    do_agentmemory: bool,
+) -> str | None:
+    """The flag-only command that repeats this selection, or None when the flags
+    cannot express it because `--skill` would widen a per-pack subset."""
+    packs = list(selection)
+    skills: list[str] = []
+    for names in selection.values():
+        skills.extend(name for name in names if name not in skills)
+    # Whole rosters need no `--skill`, so try the short form before the long one.
+    if packs and _resolve_pack_skills(manifest, packs, []) == selection:
+        skills = []
+    elif packs and _resolve_pack_skills(manifest, packs, skills) != selection:
+        return None
+
+    parts = ["agentic-install-skills-mcps"]
+    if packs:
+        parts.append(f"--skill-pack {','.join(packs)}")
+        if skills:
+            parts.append(f"--skill {','.join(skills)}")
+        parts.append(f"--skill-agent {','.join(skill_agents)}")
+    mcps = [
+        name
+        for name, wanted in (("codebase-memory-mcp", do_codebase), ("agentmemory", do_agentmemory))
+        if wanted
+    ]
+    if len(mcps) == len(_MCP_LABELS):
+        parts.append("--all-mcps")
+    elif mcps:
+        parts.append(f"--mcp {','.join(mcps)}")
+    parts.append("--yes")
+    return " ".join(parts)
+
+
 def _install_skills(
     manifest: SkillManifest,
     selection: dict[str, list[str]],
@@ -697,6 +798,14 @@ def _parse(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Install all MCPs without prompting",
     )
+    parser.add_argument(
+        "--mcp",
+        action="append",
+        help=(
+            f"Install only these MCP servers ({', '.join(_MCP_LABELS)}). "
+            "Repeat or use commas."
+        ),
+    )
     parser.add_argument("--yes", action="store_true", help="Assume defaults in prompts")
     parser.add_argument(
         "--verbose", action="store_true", help="Show full command output"
@@ -710,9 +819,9 @@ def _parse(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parse(argv or sys.argv[1:])
+    args = _parse(argv if argv is not None else sys.argv[1:])
     set_verbose(args.verbose)
-    non_interactive = bool(args.yes)
+    non_interactive = bool(args.yes) or not interactive()
 
     if not _validate_remote_contract():
         return 1
@@ -739,28 +848,36 @@ def main(argv: list[str] | None = None) -> int:
     do_agentmemory = plan.do_agentmemory
 
     if not do_skills and not do_codebase and not do_agentmemory and not non_interactive:
-        if not args.skill_agent:
+        skill_selection = _pick_skills(manifest, requested_skill_names)
+        if skill_selection and not args.skill_agent:
             selected_skill_agents = choose(
                 "Install skills for which agents?",
-                [(agent, label, True) for agent, _, label in SKILL_AGENTS],
-                non_interactive=False,
+                [Option(agent, label, True) for agent, _, label in SKILL_AGENTS],
             )
-        skill_selection = _pick_skills(manifest)
+            if not selected_skill_agents:
+                warn("No target agent selected")
+                skill_selection = {}
         do_skills = bool(skill_selection)
+
         selected_mcps = choose(
             "Select MCP tooling",
-            [
-                (
-                    "codebase-memory-mcp",
-                    "codebase-memory-mcp (project code graph, checksum-pinned binary)",
-                    True,
-                ),
-                ("agentmemory", "agentmemory (Hermes memory provider, npm)", True),
-            ],
-            non_interactive=False,
+            [Option(name, label, True) for name, label in _MCP_LABELS.items()],
         )
         do_codebase = "codebase-memory-mcp" in selected_mcps
         do_agentmemory = "agentmemory" in selected_mcps
+
+        if do_skills or do_codebase or do_agentmemory:
+            _summarize_selection(
+                manifest, skill_selection, selected_skill_agents, do_codebase, do_agentmemory
+            )
+            replay = _replay_command(
+                manifest, skill_selection, selected_skill_agents, do_codebase, do_agentmemory
+            )
+            if replay:
+                info(f"Same selection without prompts: {replay}")
+            if not ask("Install this selection", default=True, non_interactive=False):
+                skip("nothing installed")
+                return 0
 
     ok_all = True
     if do_skills:

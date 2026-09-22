@@ -727,7 +727,7 @@ def warn_missing_commands(servers: list[McpServer]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parse(argv or sys.argv[1:])
+    args = _parse(argv if argv is not None else sys.argv[1:])
     set_verbose(args.verbose)
     server_names = _select_many(
         "MCP servers",

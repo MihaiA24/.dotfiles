@@ -15,6 +15,7 @@ import urllib.request
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Iterable
+from typing import NamedTuple
 from typing import Sequence
 
 from rich.console import Console
@@ -123,25 +124,39 @@ def ask(prompt: str, *, default: bool, non_interactive: bool) -> bool:
     return Confirm.ask(f"[cyan]?[/] {prompt}", default=default)
 
 
-def choose(
-    prompt: str,
-    choices: Sequence[tuple[str, str, bool] | str],
-    *,
-    non_interactive: bool,
-) -> list[str]:
-    """Checkbox picker over `(value, label, checked)` rows; a bare str row is a heading.
+class Option(NamedTuple):
+    """One checkbox row. `description` shows under the list while the row is pointed at."""
 
-    Returns picked values in row order. Non-interactive (or stdin not a TTY) returns
-    the pre-checked values. Ctrl-C exits with status 130.
+    value: str
+    label: str
+    checked: bool = False
+    description: str | None = None
+
+
+def interactive() -> bool:
+    """True when a prompt can both draw and read on this terminal."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def choose(prompt: str, options: Sequence[Option | str]) -> list[str]:
+    """Checkbox picker over `Option` rows; a bare str row is a heading.
+
+    Returns the picked values in row order, and an empty list when there is no
+    terminal to prompt on. Ctrl-C exits with status 130.
     """
-    if non_interactive or not sys.stdin.isatty():
-        return [row[0] for row in choices if isinstance(row, tuple) and row[2]]
+    if not interactive():
+        return []
 
     rows = [
-        questionary.Separator(f"── {row} ──")
-        if isinstance(row, str)
-        else questionary.Choice(row[1], value=row[0], checked=row[2])
-        for row in choices
+        questionary.Separator(f"── {option} ──")
+        if isinstance(option, str)
+        else questionary.Choice(
+            option.label,
+            value=option.value,
+            checked=option.checked,
+            description=option.description,
+        )
+        for option in options
     ]
     picked = questionary.checkbox(
         prompt,

@@ -13,7 +13,7 @@ Docs:
     - OMP / Oh My Pi (`omp`)
     - OpenAI Codex CLI (`codex`)
     - Claude Code (`claude`)
-  - Without `--all`/`--yes` a checkbox picker selects which CLIs to install.
+  - Without `--all` the command opens a checkbox picker on a terminal. A run with `--yes`, or any run without a terminal, installs nothing unless `--all` is passed.
 - `agentic-install-skills-mcps`
   - Installs:
     - mattpocock skills pack (global)
@@ -22,7 +22,7 @@ Docs:
     - `codebase-memory-mcp` (UI install supported)
     - `agentmemory` (CLI + Hermes MCP config)
   - Skill packs are driven by the bundled `agentic_env/skill-packs.json` default with:
-    - `packs` entries whose `source` is `owner/repo#<tag>` (pinned; `skills add` clones that tag) or `./<dir>` (a copy vendored inside the package, installed as a local path; pstack lives at `agentic_env/vendored/pstack`, provenance in its `UPSTREAM.md`, ADR-0010). Each pack can define optional `skills` (array of specific skill names) to install only those from that pack by default.
+    - `packs` entries whose `source` is `owner/repo#<tag>` (pinned; `skills add` clones that tag) or `./<dir>` (a copy vendored inside the package, installed as a local path; pstack lives at `agentic_env/vendored/pstack`, provenance in its `UPSTREAM.md`, ADR-0010). Each pack can define optional `skills` to install only those from that pack by default. A `skills` entry is either a name or `{"name": ..., "description": ...}`; the description shows under the picker while that row is pointed at.
       The roster's roles, triggers and exclusions: `DECISIONS_AI_TOOLING.md` §6; review standards: `CODING_STANDARDS.md`.
     - `profiles` (named pack sets).
   - Supported options:
@@ -32,7 +32,11 @@ Docs:
     - `--skill-profile` (for example: `default`, `minimal`, `agentic-only`).
     - `--skill-config PATH` to use a custom skill-pack config.
     - `--all-skills` to install every configured pack.
-  - With no selection flags on a TTY the command is guided: three checkbox pickers (agents, skills grouped by pack with the `default` profile pre-checked, MCP tooling). Space toggles, `a` selects all, `i` inverts, enter confirms; `--yes` keeps the flag-only non-interactive behaviour.
+    - `--mcp` (comma-separated, repeated: `codebase-memory-mcp`, `agentmemory`) to install one MCP server; `--all-mcps` installs both.
+  - With no selection flags on a terminal the command is guided: skills first, then the target agents, then MCP tooling, then a summary you confirm. Space toggles, `a` toggles all, `i` inverts, enter confirms.
+  - The skills picker has one row per skill plus an `All of <pack>` row that takes the pack roster. The `default` profile pre-checks the pack rows; `--skill NAME` pre-checks those skill rows instead.
+  - Before installing, the run prints the selection and the flag-only command that repeats it, so the same choice can be replayed on another host.
+  - `--yes` installs the flags as given without prompting. Without a terminal the pickers cannot run, so a piped or CI invocation needs the flags.
   - Example:
     - `agentic-install-skills-mcps --all-skills --skill-agent hermes,claude,codex --yes`
   - Skill config JSON keeps the same shape as the bundled default.
@@ -55,7 +59,7 @@ Docs:
   - defaults:
     - `--skill-profile default`
     - all install/configure targets
-    - non-interactive execution with phase `--yes` flags
+    - non-interactive execution with phase `--yes` flags, or `--interactive` to let the two install phases open their pickers instead
   - split execution with:
     - `--skip-install-agents`
     - `--skip-install-skills`
@@ -81,7 +85,8 @@ Install the command set from this checkout:
 ```bash
 cd /path/to/your/dotfiles/agentic-env
 uv tool install --force .
-agentic-bootstrap
+agentic-bootstrap                # installs every CLI and the default profile
+agentic-bootstrap --interactive  # same phases, but the install phases prompt
 agentic-update-stack
 
 # Split steps (legacy):
@@ -94,7 +99,7 @@ Run from the checkout without installing (`uv run` syncs the venv and exposes th
 
 ```bash
 cd /path/to/your/dotfiles/agentic-env
-uv run agentic-install-skills-mcps   # guided: agents, skills per pack, MCPs
+uv run agentic-install-skills-mcps   # guided: skills per pack, agents, MCPs
 uv run agentic-install-agents        # guided: agent CLIs
 uv run agentic-bootstrap
 uv run agentic-stack-doctor
@@ -102,7 +107,7 @@ uv run agentic-stack-doctor
 ```
 
 Unit tests: `uv run pytest -q` (pytest comes from the `dev` dependency group in `pyproject.toml`).
-The guided pickers are exercised through a real pseudo-terminal by `uv run pytest -q -k guided_pty` (agents accepted, every skill and MCP cleared with `a`, confirmed; installers are stubbed to fail if reached).
+The guided pickers are exercised through a real pseudo-terminal by `uv run pytest -q -k guided_pty` (every skill and MCP cleared with `a`, confirmed; installers are stubbed to fail if reached).
 
 ### Version policy
 

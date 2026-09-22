@@ -64,6 +64,18 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("--yes", plan[1].argv)
         self.assertIn("--yes", plan[2].argv)
 
+    def test_interactive_bootstrap_plan_lets_the_install_phases_prompt(self) -> None:
+        plan = bootstrap._bootstrap_plan(bootstrap._parse(["--interactive"]))
+        assert plan is not None
+
+        self.assertEqual(plan[0].argv, [])
+        self.assertEqual(plan[1].argv, [])
+        self.assertIn("--yes", plan[2].argv)
+
+    @patch("agentic_env.bootstrap.interactive", return_value=False)
+    def test_interactive_bootstrap_requires_a_terminal(self, _mock_interactive) -> None:
+        self.assertEqual(bootstrap.main(["--interactive"]), 1)
+
     @patch("agentic_env.bootstrap.install_agents.main")
     @patch("agentic_env.bootstrap.install_skills_mcps.main")
     @patch("agentic_env.bootstrap.stack_doctor.main", return_value=0)

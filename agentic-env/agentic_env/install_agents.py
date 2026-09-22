@@ -6,11 +6,13 @@ import argparse
 import sys
 
 from .common import (
+    Option,
     ask,
     choose,
     cmd_exists,
     cmd_version_at_least,
     info,
+    interactive,
     ok,
     run,
     run_remote_script,
@@ -168,9 +170,9 @@ def _parse(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parse(argv or sys.argv[1:])
+    args = _parse(argv if argv is not None else sys.argv[1:])
     set_verbose(args.verbose)
-    non_interactive = bool(args.yes)
+    non_interactive = bool(args.yes) or not interactive()
 
     if not _validate_remote_contract():
         return 1
@@ -180,17 +182,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     rows = [
-        ("hermes", "Hermes Agent", True),
-        ("omp", "OMP / Oh My Pi", True),
-        ("codex", "OpenAI Codex CLI", True),
-        ("claude", "Claude Code", True),
+        Option("hermes", "Hermes Agent", True),
+        Option("omp", "OMP / Oh My Pi", True),
+        Option("codex", "OpenAI Codex CLI", True),
+        Option("claude", "Claude Code", True),
     ]
     if args.all:
-        picked = [value for value, _, _ in rows]
+        picked = [option.value for option in rows]
     elif non_interactive:
         picked = []
     else:
-        picked = choose("Select agent CLIs to install", rows, non_interactive=False)
+        picked = choose("Select agent CLIs to install", rows)
 
     do_hermes = "hermes" in picked
     do_omp = "omp" in picked

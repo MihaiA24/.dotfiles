@@ -218,24 +218,45 @@ class InstallSkillsMcpsTests(unittest.TestCase):
             {"rostered": ["tdd", "grilling"], "open": []},
         )
 
+    @patch("agentic_env.install_skills_mcps.choose", return_value=[])
+    def test_picker_rows_are_pre_checked_from_the_profile_or_from_skill(self, mock_choose) -> None:
+        manifest = install_skills_mcps.load_skill_manifest(
+            install_skills_mcps._SKILL_PACK_CONFIG_PATH
+        )
+        assert manifest is not None
+
+        install_skills_mcps._pick_skills(manifest, [])
+        rows = {row.value: row for row in mock_choose.call_args.args[1] if not isinstance(row, str)}
+        self.assertTrue(rows["mattpocock/"].checked)
+        self.assertFalse(rows["mattpocock/tdd"].checked)
+        self.assertEqual(rows["mattpocock/tdd"].description, manifest.packs["mattpocock"].descriptions["tdd"])
+
+        install_skills_mcps._pick_skills(manifest, ["tdd"])
+        rows = {row.value: row for row in mock_choose.call_args.args[1] if not isinstance(row, str)}
+        self.assertFalse(rows["mattpocock/"].checked)
+        self.assertTrue(rows["mattpocock/tdd"].checked)
+        self.assertFalse(rows["mattpocock/teach"].checked)
+
     @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
     @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
     @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
     @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    @patch("agentic_env.install_skills_mcps.interactive", return_value=True)
     @patch("agentic_env.install_skills_mcps.ask", return_value=True)
     @patch("agentic_env.install_skills_mcps.choose")
     def test_guided_main_installs_only_picked_skills_and_mcps(
         self,
         mock_choose,
         _mock_ask,
+        _mock_interactive,
         mock_install_agentmemory,
         mock_install_codebase_memory,
         mock_install_skills,
         _mock_validate_remote_contract,
     ) -> None:
         mock_choose.side_effect = [
-            ["claude"],
             ["mattpocock/tdd", "ponytail/ponytail"],
+            ["claude"],
             ["agentmemory"],
         ]
 
@@ -247,9 +268,135 @@ class InstallSkillsMcpsTests(unittest.TestCase):
         mock_install_codebase_memory.assert_not_called()
         mock_install_agentmemory.assert_called_once()
 
+    @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    @patch("agentic_env.install_skills_mcps.interactive", return_value=True)
+    @patch("agentic_env.install_skills_mcps.ask", return_value=True)
+    @patch("agentic_env.install_skills_mcps.choose")
+    def test_guided_pack_row_installs_the_whole_roster(
+        self,
+        mock_choose,
+        _mock_ask,
+        _mock_interactive,
+        _mock_install_agentmemory,
+        _mock_install_codebase_memory,
+        mock_install_skills,
+        _mock_validate_remote_contract,
+    ) -> None:
+        """The `All of <pack>` row installs the pack roster, and it wins over the
+        individual rows of the same pack."""
+        mock_choose.side_effect = [["caveman/", "caveman/caveman"], ["claude"], []]
+
+        self.assertEqual(install_skills_mcps.main([]), 0)
+
+        _, selection, _ = mock_install_skills.call_args.args
+        self.assertEqual(selection, {"caveman": ["caveman", "caveman-commit"]})
+
+    @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    @patch("agentic_env.install_skills_mcps.interactive", return_value=True)
+    @patch("agentic_env.install_skills_mcps.ask", return_value=True)
+    @patch("agentic_env.install_skills_mcps.choose")
+    def test_guided_skills_are_skipped_when_no_agent_is_picked(
+        self,
+        mock_choose,
+        _mock_ask,
+        _mock_interactive,
+        _mock_install_agentmemory,
+        _mock_install_codebase_memory,
+        mock_install_skills,
+        _mock_validate_remote_contract,
+    ) -> None:
+        mock_choose.side_effect = [["caveman/caveman"], [], []]
+
+        self.assertEqual(install_skills_mcps.main([]), 0)
+        mock_install_skills.assert_not_called()
+
+    @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    @patch("agentic_env.install_skills_mcps.interactive", return_value=False)
+    @patch("agentic_env.install_skills_mcps.choose")
+    def test_without_a_terminal_and_without_flags_nothing_is_installed(
+        self,
+        mock_choose,
+        _mock_interactive,
+        mock_install_agentmemory,
+        mock_install_codebase_memory,
+        mock_install_skills,
+        _mock_validate_remote_contract,
+    ) -> None:
+        """A piped run without `--yes` used to take every pre-checked row and
+        install the whole default profile."""
+        self.assertEqual(install_skills_mcps.main([]), 0)
+
+        mock_choose.assert_not_called()
+        mock_install_skills.assert_not_called()
+        mock_install_codebase_memory.assert_not_called()
+        mock_install_agentmemory.assert_not_called()
+
+    @patch("agentic_env.install_skills_mcps._validate_remote_contract", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_skills", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_codebase_memory", return_value=True)
+    @patch("agentic_env.install_skills_mcps._install_agentmemory", return_value=True)
+    def test_mcp_flag_installs_one_server(
+        self,
+        mock_install_agentmemory,
+        mock_install_codebase_memory,
+        _mock_install_skills,
+        _mock_validate_remote_contract,
+    ) -> None:
+        self.assertEqual(install_skills_mcps.main(["--mcp", "agentmemory", "--yes"]), 0)
+        mock_install_agentmemory.assert_called_once()
+        mock_install_codebase_memory.assert_not_called()
+
+        self.assertEqual(install_skills_mcps.main(["--mcp", "nope", "--yes"]), 1)
+
+    def test_replay_command_round_trips_or_reports_nothing(self) -> None:
+        manifest = install_skills_mcps.load_skill_manifest(
+            install_skills_mcps._SKILL_PACK_CONFIG_PATH
+        )
+        assert manifest is not None
+        replay = install_skills_mcps._replay_command
+
+        self.assertEqual(
+            replay(manifest, {"caveman": ["caveman"]}, ["claude"], False, True),
+            "agentic-install-skills-mcps --skill-pack caveman --skill caveman"
+            " --skill-agent claude --mcp agentmemory --yes",
+        )
+        self.assertEqual(
+            replay(manifest, {}, ["claude"], True, True),
+            "agentic-install-skills-mcps --all-mcps --yes",
+        )
+        # A pack that ships no roster takes everything it ships, so a `--skill`
+        # filter needed by another pack would narrow it. That has no flag-only form.
+        open_manifest = install_skills_mcps.SkillManifest(
+            packs={
+                "rostered": install_skills_mcps.SkillPack(
+                    "rostered", "owner/rostered#v1", "rostered skills", ("tdd", "grilling")
+                ),
+                "open": install_skills_mcps.SkillPack("open", "owner/open#v1", "open skills", ()),
+            },
+            aliases={},
+            profiles={},
+        )
+        self.assertIsNone(
+            replay(open_manifest, {"rostered": ["tdd"], "open": []}, ["claude"], False, False)
+        )
+        self.assertEqual(
+            replay(open_manifest, {"open": []}, ["claude"], False, False),
+            "agentic-install-skills-mcps --skill-pack open --skill-agent claude --yes",
+        )
+
     def test_guided_pty_run_with_everything_cleared_installs_nothing(self) -> None:
-        """Drive the real pickers through a pseudo-terminal: accept the agents,
-        clear every skill and MCP with `a`, confirm -> three skips, exit 0."""
+        """Drive the real pickers through a pseudo-terminal: clear every skill and
+        MCP with `a`, confirm -> three skips, exit 0. Clearing the skills also
+        drops the agent picker; installers are stubbed to fail if reached."""
         manifest = install_skills_mcps.load_skill_manifest(
             install_skills_mcps._SKILL_PACK_CONFIG_PATH
         )
@@ -257,8 +404,9 @@ class InstallSkillsMcpsTests(unittest.TestCase):
         output, status = _run_in_pty(
             _GUIDED_CHILD,
             [
-                (b"which agents?", b"\r"),
-                (b"Select skills to install", b"a\r"),
+                # 4 pack rows start checked, so the first `a` selects all 36 rows
+                # and the second clears them.
+                (b"Select skills to install", b"aa\r"),
                 (b"Select MCP tooling", b"a\r"),
             ],
         )
@@ -266,6 +414,7 @@ class InstallSkillsMcpsTests(unittest.TestCase):
 
         self.assertEqual(status, 0, text)
         self.assertNotIn("INSTALL-CALLED", text)
+        self.assertNotIn("which agents?", text)
         for line in ("skill packs: skipped", "codebase-memory-mcp: skipped", "agentmemory: skipped"):
             self.assertIn(line, text)
         for pack in manifest.packs.values():
