@@ -173,6 +173,8 @@ Every tracked tool or process is in exactly one state; the state names the bar f
   - `agentic-env/DECISIONS_AI_TOOLING.md`: operative agent-stack decisions, one section per layer (harness, context I/O, compaction, memory, code graph, skills, hooks), each Decided → Why → Rejected → Revisit → Wiring.
   - `agentic-env/docs/CONTEXT.md`: canonical vocabulary and invariants.
   - `agentic-env/docs/adr/*.md`: irreversible design decisions.
+  - `agentic-env/guides/*.md`: task-level workflow guides that apply DECISIONS §6 to host setup, project verification, and skill choice. They never override DECISIONS.
+  - `agentic-env/agentic_env/vendored/*/UPSTREAM.md`: provenance for each vendored pack, covering the source revision, licence, local adaptations, and update procedure.
 
 ## Skill lifecycle
 
