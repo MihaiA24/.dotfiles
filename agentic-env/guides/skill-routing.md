@@ -4,7 +4,7 @@ Use this guide to choose a skill for a task, if one is needed. It follows [Decis
 
 Choose the route your task needs. Skip the rest.
 
-Invoke the skill in your prompt. Pstack skills and Matt's `to-spec` and `to-tickets` are manual-only. OMP hides manual skills from automatic discovery but loads them by name. Invoking a recipe authorizes its named dependencies; reading a skill to check discovery does not invoke it.
+Invoke the skill in your prompt with your harness's syntax, listed in [Invoke skills in your harness](poteto-workflow.md#invoke-skills-in-your-harness). Pstack skills and Matt's `to-spec` and `to-tickets` are manual-only, so invoke them by name. Invoking a recipe authorizes its named dependencies. Reading a skill to check discovery does not invoke it.
 
 ## Find the route
 
