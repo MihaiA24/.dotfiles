@@ -35,6 +35,8 @@ Run the Hermes trust command yourself. Do not let the agent grant trust or chang
 
 Pstack skills are manual-only. OMP and Claude Code honor that flag and hide them from the model's automatic skill list. Hermes ignores it, so the skill's own guard stops a run you did not request. Invoking a recipe authorizes the skills it names, so `/teach` may run `/how`, `/why`, and `/unslop`.
 
+The vendored recipes that run other skills target OMP and Hermes only. Claude Code blocks one skill from invoking a manual-only skill, so there `/teach` cannot run `/how` or `/why`, and `/technical-writing` cannot run `/unslop`. `/recall` reads only OMP and Hermes session history. In Claude Code, invoke each skill yourself, one per prompt, including each part of the combined prompt in step 7. Codex is untested.
+
 ### Open the target repository
 
 Start your harness in the repository root and ask:
@@ -65,7 +67,7 @@ Lauren works in Cursor and Grok Bot. These parts of the articles depend on them 
 | `/swarm` across cloud agents | Cursor Cloud Agents | Repeat the verifier run several times and compare the results. |
 | Routines and Automations for daily maintenance and report reproduction | Grok Bot, Cursor | A cron job, systemd timer, or CI schedule that runs your harness non-interactively with `omp -p`, `claude -p`, `codex exec`, or `hermes -z`. It needs its own setup and authorization. |
 | `/architect` | Unselected pstack skill | `/codebase-design` with `/prototype`, as in step 8 |
-| `principle-build-the-lever` | Unselected pstack skill | The CLI checklist in step 2 |
+| `principle-build-the-lever` | Unselected pstack skill | [CODING_STANDARDS §2](../CODING_STANDARDS.md#2-build-the-lever-narrowed) and the CLI checklist in step 2 |
 
 ## Part 1: establish verification
 
@@ -196,6 +198,15 @@ Don't accept the agent's first design, and don't refine an abstract plan without
 /[verifier] to drive each one and capture screenshots and measurements.
 Compare them against the question. Stop before production code so I can
 choose.
+```
+
+`/prototype` has no branch for a behavior or timing question, and its UI branch needs a browser route. For those questions, and for CLIs, services, and native apps, ask for the smallest throwaway script per alternative. Observe what you are deciding: log the timing, print the output, or drive it with the verifier.
+
+```text
+Prototype [behavior or timing question] with the smallest throwaway script
+for each of two or three alternatives, in a scratch directory. Observe the
+result with /[verifier], logs, or timing output. Compare the alternatives
+and stop before production code so I can choose.
 ```
 
 Do not send an abstract plan to reviewers. Agents invent theoretical risks when no code backs the plan.
