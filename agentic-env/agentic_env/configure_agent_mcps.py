@@ -161,6 +161,15 @@ def load_yaml_object(path: Path) -> dict[str, object] | None:
 
 
 def _write_atomic_text(path: Path, content: str, *, dry_run: bool) -> bool:
+    # A symlinked config (e.g. dotfiles-managed) keeps its link: write the resolved
+    # target, with temp file and backup beside the target.
+    if path.is_symlink():
+        try:
+            path = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            warn(f"{path}: refusing to write through dangling or looping symlink ({exc})")
+            return False
+
     if dry_run:
         skip(f"dry-run: would write {path}")
         return True
@@ -510,22 +519,16 @@ OMP_AGENT_CONFIG_CONTRACT = (
     ("skills", "enableAgentsUser", False),
 )
 
-_OMP_AGENT_CONFIG_TEMPLATE = """memory:
-  backend: mnemopi
-mnemopi:
-  polyphonicRecall: false
-{extensions}compaction:
-  thresholdTokens: 150000
-  idleEnabled: true
-  handoffSaveToDisk: true
-  methodOrder:
-    - handoff
-    - remote
-    - soft
-skills:
-  enableClaudeUser: true
-  enableAgentsUser: false
-"""
+
+def omp_agent_config_text(hooks_dir: Path) -> str:
+    """Fresh ~/.omp/agent/config.yml content built from OMP_AGENT_CONFIG_CONTRACT."""
+    sections: dict[str, dict[str, object]] = {}
+    for block, key, value in OMP_AGENT_CONFIG_CONTRACT:
+        sections.setdefault(block, {})[key] = value
+    extensions = [str(hooks_dir / name) for name in OMP_HOOK_FILES]
+    return yaml.safe_dump(
+        {**sections, "extensions": extensions}, sort_keys=False, allow_unicode=True
+    )
 
 
 def omp_extension_paths(data: dict[str, object]) -> list[str]:
@@ -582,9 +585,7 @@ def converge_omp_agent_config(*, dry_run: bool) -> bool:
                 "not seeding a config the doctor would fail"
             )
             return False
-        hook_lines = "\n".join(f"  - {hooks_dir / name}" for name in OMP_HOOK_FILES)
-        extensions = f"extensions:\n{hook_lines}\n"
-        content = _OMP_AGENT_CONFIG_TEMPLATE.format(extensions=extensions)
+        content = omp_agent_config_text(hooks_dir)
         if not _write_atomic_text(path, content, dry_run=dry_run):
             return False
         if not dry_run:
@@ -604,7 +605,7 @@ def converge_omp_agent_config(*, dry_run: bool) -> bool:
         f"{path}: missing stack contract settings: {', '.join(missing)} "
         "(see DECISIONS_AI_TOOLING.md 'Live wiring'; merge manually)"
     )
-    return True
+    return False
 
 
 def _install_skill(root: Path, skill: Skill, *, dry_run: bool) -> bool:

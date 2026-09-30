@@ -36,12 +36,8 @@ class _Host:
         for path in self.mcp_paths:
             path.parent.mkdir(parents=True, exist_ok=True)
             self.write_mcp(path, gated=True)
-        extensions = "extensions:\n" + "".join(
-            f"  - {hooks / name}\n" for name in configure_agent_mcps.OMP_HOOK_FILES
-        )
         self.agent_config.write_text(
-            configure_agent_mcps._OMP_AGENT_CONFIG_TEMPLATE.format(extensions=extensions),
-            encoding="utf-8",
+            configure_agent_mcps.omp_agent_config_text(hooks), encoding="utf-8"
         )
         self.claude_json.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
         for name in profile_skills("default"):
@@ -182,7 +178,7 @@ class StackDoctorTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), original)
 
     def test_method_order_requires_exact_sequence_but_accepts_yaml_forms(self) -> None:
-        method_block = "  methodOrder:\n    - handoff\n    - remote\n    - soft\n"
+        method_block = "  methodOrder:\n  - handoff\n  - remote\n  - soft\n"
         cases = (
             ("", False),
             ("  methodOrder: []\n", False),
@@ -192,7 +188,7 @@ class StackDoctorTests(unittest.TestCase):
             ("  methodOrder: [handoff, remote, soft] # ordered fallback\n", True),
             ("  'methodOrder': ['handoff', \"remote\", soft]\n", True),
             ("  methodOrder: # fallback order\n    - 'handoff' # primary\n    - \"remote\"\n    - soft # final\n", True),
-            ("  methodOrder:\n  - handoff\n  - remote\n  - soft\n", True),
+            ("  methodOrder:\n    - handoff\n    - remote\n    - soft\n", True),
         )
         with tempfile.TemporaryDirectory() as temp_dir:
             host = _Host(Path(temp_dir))
