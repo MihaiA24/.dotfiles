@@ -18,6 +18,7 @@ Invoke the skill in your prompt with your harness's syntax, listed in [Invoke sk
 | You are resuming earlier work in this workspace | `/recall` |
 | Goals, constraints, or choices only a person can make | `/grilling` |
 | An unknown that an experiment can measure | `/prototype`, with the verifier |
+| An existing Spark job needs performance optimization | `/apache-spark` (opt-in): completed-run evidence, targeted experiments, output-equivalence and before/after proof |
 | A new interface that callers will use | `/technical-writing` and `/codebase-design` |
 | A consequential doubt that evidence supports | `/interrogate` |
 | A settled design needs coordination across sessions or people | `/to-spec` or `/to-tickets` |
@@ -69,6 +70,12 @@ What tradeoffs did you make, and which parts did you verify?
 /recall my work on [topic] in this repository over the last 7 days.
 Check the current state before recommending the next action.
 ```
+
+## Optimize an existing Spark job from execution evidence
+
+Use [`/apache-spark`](../agentic_env/skills/apache-spark/SKILL.md) for an existing job's latency, throughput or cost problem. Supply the job and available completed-run artifacts; ask for analysis only when you want ranked experiments before edits. Static EXPLAIN without runtime evidence supports hypotheses, not a measured bottleneck or speedup.
+
+This first-party skill is outside the default profiles; use the [Apache Spark installation route](../README.md#apache-spark-optimize-existing-jobs). It covers portable Apache behavior, not a mandatory vendor platform or cluster upgrade.
 
 ## Settle human goals with grilling
 
