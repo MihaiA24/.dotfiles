@@ -1,6 +1,6 @@
 ---
 name: apache-spark
-description: Optimizes existing Apache Spark jobs using execution plans, completed-run telemetry, and controlled before/after measurements while preserving results. Use when reviewing Spark SQL, PySpark, Scala/DataFrame or RDD job performance, slow stages, skew, shuffle, spill, executor memory, Python UDF overhead, or excessive output files.
+description: Optimizes existing Apache Spark jobs from completed-run evidence while preserving results. Use when a Spark job or query is slow, costly, skewed, spilling, short of memory, or writes too many small files.
 ---
 
 # Apache Spark: optimize existing jobs
@@ -30,9 +30,13 @@ For each expensive critical-path stage/operator, relate task-duration distributi
 
 Prefer reducing unnecessary data and work before hints, configuration, or more hardware. Check the existing physical plan first: Catalyst or AQE may already perform the proposed optimization. Use the exact runtime's Apache documentation, and provider documentation for provider-specific features.
 
-For each candidate, specify the code/config delta and its scope, causal hypothesis, expected plan/metric change, semantic risk, resource/cost tradeoff, and rollback. Each independent change is its own experiment with its own predicted metric, including dead-work removal; queue the rest instead of bundling them. Configure deployment settings at submission/startup, SQL settings in the relevant session, and persistent layout changes only with authorization. Derive every configuration value from a named measurement (partition bytes, built relation size, failed memory domain); when that measurement is missing, name it instead of proposing a number.
+For each candidate, specify the code/config delta and its scope, causal hypothesis, expected plan/metric change, semantic risk, resource/cost tradeoff, and rollback. Then:
 
-**Gate:** provide a ranked experiment plan; implement the leading candidate only when the request authorizes edits. An analysis-only request stops at the plan. Access to production does not authorize expensive reruns, catalog changes, compaction, destructive writes, or cluster-wide changes.
+- Make each independent change its own experiment with its own predicted metric, including dead-work removal; queue the rest instead of bundling them.
+- Derive every configuration value from a named measurement (partition bytes, built relation size, failed memory domain); when that measurement is missing, name it instead of proposing a number.
+- Set deployment settings at submission/startup and SQL settings in the relevant session.
+
+**Gate:** provide a ranked experiment plan; implement the leading candidate only when the request authorizes edits. An analysis-only request stops at the plan. Access to production does not authorize expensive reruns, catalog or table-layout changes, compaction, destructive writes, or cluster-wide changes.
 
 ## 4. Prove correctness and improvement
 
@@ -47,20 +51,7 @@ Compare repeat runs on the same input snapshot, runtime, resources, relevant con
 ## Deliverable
 
 1. **Baseline:** job/run locator, objective, input/resources/runtime, and evidence coverage.
-2. **Findings:** ranked `stage/operator | observation | cause/hypothesis | confidence` rows.
+2. **Findings:** ranked `locator | observation | hypothesis | alternative | confidence` rows.
 3. **Change:** exact delta, expected effect, semantic/resource risks, and rollback.
 4. **Proof:** `metric | baseline | candidate | variability`; output checks and artifacts, or the exact missing evidence and next command/action.
 5. **Decision:** keep/reject the candidate against the objective; identify the next experiment only if evidence warrants one.
-
-## Example invocations
-
-```text
-/apache-spark Review jobs/daily_orders.py using the completed application in
-artifacts/spark-run/. Rank causes of the 45-minute runtime; do not edit yet.
-```
-
-```text
-/apache-spark Optimize this existing Scala job's skewed join. Use its event
-log and final SQL plan, preserve duplicates/nulls, and compare isolated reruns
-on the same snapshot and executor budget. Do not publish production output.
-```

@@ -13,7 +13,8 @@ The implementation is a single [`apache-spark`](../agentic_env/skills/apache-spa
 - **Portable baseline:** no vendor engine, new dependency, log parser, automatic production rerun, or fabricated cost model. Existing UI/History Server/REST evidence is sufficient for the skill's workflow.
 - **Streaming boundary:** detect state/checkpoint/offset semantics before applying batch recipes; require an isolated connector-aware replay plan.
 - **Packaging:** first-party `agentic-env` pack at `agentic_env/skills`, selected explicitly. Existing default/minimal/agentic-only profiles remain unchanged. Python-only copying includes all locally packaged skills, so its complete roster gains this package. Wheel artifacts include it.
-- **Fingerprint status:** leave the reviewed `skill-fingerprints.json` baseline unchanged until the requested content review. Source-only drift reports this candidate as `new`; a first-party pack has no third-party upstream, so use `--no-upstream` for its source comparison.
+- **Invocation:** model-invoked, unlike the manual-only pstack skills. Without the skill, the model scored 6/36 on open requests that never named it; manual-only invocation would forfeit the skill exactly there. The cost is one always-loaded description.
+- **Fingerprint status:** the content review below is recorded in `skill-fingerprints.json`. A first-party pack has no third-party upstream, so use `--no-upstream` for its source comparison.
 
 ## Research method and evidence limits
 
@@ -24,7 +25,7 @@ The sections retain their fact/recommendation distinction and full source ledger
 ## Initial implementation smoke evidence
 
 - Affected existing suites: `tests/test_copy_skills.py`, `tests/test_install_skills_mcps.py`, `tests/test_stack_metadata.py`, and `tests/test_skill_drift.py` pass with the package installed through the Python-only copier, the native custom-directory route, and an offline-built wheel.
-- Source-only first-party drift inspection reports `source: new`, as intended pending review.
+- Source-only first-party drift inspection reported `source: new` until the content review recorded the baseline.
 - These are package and skill-decision checks, not real Spark execution, endpoint connectivity, harness auto-discovery, correctness proof for a user job, or performance measurements.
 
 ## Why a single file: reference ablation
@@ -42,13 +43,31 @@ The score covers six behaviors on two open optimization requests (three runs eac
 
 The four sharpened rules: event logs cannot be recovered retroactively; each independent change, including dead-work removal, is its own experiment; every configuration value derives from a named measurement; reference pointers removed. Limits: one model, two or three runs per variant, a low-cost grader. Directional evidence, not proof across models or harnesses.
 
-## Questions for the later content review
+## Content review probes
+
+The reviewed revision added `alternative` to the Deliverable findings row to match step 2's gate, turned step 3's experiment and configuration rules into bullets, folded table-layout authorization into the step 3 gate, cut the description to symptoms, and moved example invocations to the README. Stateless runs compared the shipped and revised files on four hypothetical requests: driver-dominated wall time, a regressed EMR run without exports, a lagging stateful stream, and an authorized multi-symptom optimization.
+
+| Check | Shipped | Revised |
+|---|---:|---:|
+| Findings carry an alternative explanation | 8/12 | 12/12 |
+| One experiment per independent change | 3/3 | 3/3 |
+| Output multiset/schema equivalence | 3/3 | 3/3 |
+| Repeated comparable before/after runs | 3/3 | 3/3 |
+| Unanchored configuration or size value | 1/3 | 1/3 |
+
+On the revised file, analysis-only requests stopped at the plan with ranked findings and a next action (6/6), and every code/config experiment stated a predicted plan or metric change (manual reading; one resource-scaling fallback lacked one).
+
+Rejected as no-ops, because the shipped file already passed 3/3: checking platform-retained history (EMR persistent UI, History Server, `/var/log/spark/apps`) before declaring telemetry lost; quantifying wall time outside jobs; replaying fixed offsets into a fresh checkpoint and staging sink. Extending the measurement rule to "size targets" left a 128–512 MB file-size heuristic at 1/6 in both variants, so it was not adopted.
+
+Limits: one model, three to six runs per variant, a low-cost grader with every flagged result checked by hand. Description discovery, harness loading, and the shipped description wording were not tested.
+
+## Open questions for a real job
+
+The probes answered the earlier falsifiability and authorization-boundary questions for hypothetical inputs. The rest needs one of the user's completed jobs:
 
 1. Does the intake accept the artifacts the user's deployment actually exposes: History Server, event logs, UI exports, and session configuration?
 2. Do the common jobs need additional connector/table-format-specific branches beyond the portable SQL/DataFrame/RDD baseline?
-3. Can each recommendation be falsified by its predicted plan/metric change and checked against the actual downstream output contract?
-4. Does the skill stop at the correct authorization boundaries while still finishing all reachable analysis?
-5. Which Spark facts do real sessions miss? Add each as one line in `SKILL.md`, not as a new reference file.
+3. Which Spark facts do real sessions miss? Add each as one line in `SKILL.md`, not as a new reference file.
 
 ## Spark batch execution optimization research
 

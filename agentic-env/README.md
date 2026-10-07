@@ -66,7 +66,7 @@ The skills picker lists one row per skill under its pack heading, plus an `All o
 
 #### Apache Spark: optimize existing jobs
 
-[`apache-spark`](agentic_env/skills/apache-spark/SKILL.md) is a first-party, model-discoverable skill in the opt-in `agentic-env` pack. It diagnoses existing SQL, PySpark, Scala/DataFrame and RDD jobs from completed-run evidence, selects a targeted experiment, and requires correctness plus comparable before/after measurements. It covers AQE, joins/skew, scans, partitions/output files, Python boundaries, reuse and memory, with streaming/checkpoint safety boundaries.
+[`apache-spark`](agentic_env/skills/apache-spark/SKILL.md) is a first-party, model-discoverable skill in the opt-in `agentic-env` pack. It diagnoses existing Spark jobs (SQL, DataFrame or RDD, in any language) from completed-run evidence, tests one targeted change per experiment, and requires correctness plus comparable before/after measurements. It carries the optimization process; Spark specifics come from the model and the job's runtime documentation.
 
 From this directory, select one installation route:
 
@@ -78,9 +78,20 @@ uv run agentic-install-skills-mcps --skill-pack agentic-env --skill apache-spark
 python3 agentic_env/copy_skills.py --skills-dir "/path/to/project/.agents/skills" --skill apache-spark
 ```
 
-Invoke `/apache-spark` using the harness's skill syntax, supplying the existing job and available event log, History Server/UI exports, or final execution plan. An analysis-only request does not authorize edits or production reruns; without telemetry or comparable runs, the skill labels bottlenecks/gains unverified.
+Invoke `/apache-spark` using the harness's skill syntax, supplying the existing job and available event log, History Server/UI exports, or final execution plan. An analysis-only request does not authorize edits or production reruns; without telemetry or comparable runs, the skill labels bottlenecks/gains unverified. For example:
 
-The skill is a single `SKILL.md`; detailed Apache findings and their version-pinned citations live in [research and design](docs/apache-spark-optimization-research.md) for maintainers, not in the agent's instructions. Existing profiles remain unchanged; `--all-skills` includes the new pack. The reviewed fingerprint baseline remains unchanged pending review, so source-only drift reports it as `new`; use `--pack agentic-env --no-upstream --no-installed` when checking this first-party source.
+```text
+/apache-spark Review jobs/daily_orders.py using the completed application in
+artifacts/spark-run/. Rank causes of the 45-minute runtime; do not edit yet.
+```
+
+```text
+/apache-spark Optimize this existing Scala job's skewed join. Use its event
+log and final SQL plan, preserve duplicates/nulls, and compare isolated reruns
+on the same snapshot and executor budget. Do not publish production output.
+```
+
+The skill is a single `SKILL.md`; detailed Apache findings and their version-pinned citations live in [research and design](docs/apache-spark-optimization-research.md) for maintainers, not in the agent's instructions. Existing profiles remain unchanged; `--all-skills` includes the new pack. Its reviewed fingerprint is recorded in the baseline. A first-party pack has no upstream, so check this source with `--pack agentic-env --no-upstream --no-installed`.
 
 #### Install into another harness's directory
 
