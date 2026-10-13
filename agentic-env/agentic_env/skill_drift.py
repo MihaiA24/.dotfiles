@@ -61,6 +61,13 @@ UNKNOWN = "unknown"
 FIX = "agentic-install-skills-mcps --skill-profile default --yes"
 
 
+def _fix(manifest: SkillManifest, row: SkillStatus) -> str:
+    """Reinstalling the default profile never restores an opt-in pack's skill."""
+    if row.pack in manifest.profiles.get("default", ()):
+        return FIX
+    return f"agentic-install-skills-mcps --skill-pack {row.pack} --skill {row.skill} --yes"
+
+
 @dataclass
 class SkillStatus:
     """One row: `skill` as the manifest wants it versus as the world has it."""
@@ -472,7 +479,7 @@ def _cell(value: str) -> str:
     return f"[{style}]{value}[/]"
 
 
-def report(rows: list[SkillStatus], extra: list[str]) -> None:
+def report(manifest: SkillManifest, rows: list[SkillStatus], extra: list[str]) -> None:
     table = Table(title="agentic-skill-drift", show_lines=False)
     for column in ("Pack", "Skill", "Source", "Installed", "Upstream", "Local/upstream"):
         table.add_column(column, overflow="fold")
@@ -488,7 +495,7 @@ def report(rows: list[SkillStatus], extra: list[str]) -> None:
         warn(f"{len(drifted)} of {len(rows)} curated skills drifted")
         for row in drifted:
             if row.install in ("missing", "modified") or row.install.startswith("foreign:"):
-                warn(f"{row.skill}: install {row.install} — fix with `{FIX}`")
+                warn(f"{row.skill}: install {row.install} — fix with `{_fix(manifest, row)}`")
     elif not any(UNKNOWN in (row.source, row.install, row.upstream) for row in rows):
         ok(f"{len(rows)} curated skills: no drift (local adaptations excluded)")
 
@@ -599,7 +606,7 @@ def main(argv: list[str] | None = None) -> int:
             findings = {"skills": [asdict(row) for row in rows], "unmanaged": extra}
             print(json.dumps(findings, indent=2), file=document)
         else:
-            report(rows, extra)
+            report(manifest, rows, extra)
 
         if any(UNKNOWN in (row.source, row.install, row.upstream) for row in rows):
             return 2

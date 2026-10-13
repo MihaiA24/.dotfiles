@@ -321,6 +321,40 @@ class CommandTests(unittest.TestCase):
             )
             self.assertIn("agentic-skill-drift", normal.getvalue())
 
+    def test_fix_hint_installs_the_missing_skill_even_outside_the_default_profile(self) -> None:
+        """Reinstalling the default profile never restores an opt-in pack's skill."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for pack in ("core", "extra"):
+                _write_skill(root / pack, f"{pack}-skill", f"{pack} source\n")
+            config = root / "packs.json"
+            config.write_text(json.dumps({
+                "packs": [
+                    {"name": pack, "source": f"./{pack}", "label": pack, "skills": [f"{pack}-skill"]}
+                    for pack in ("core", "extra")
+                ],
+                "profiles": {"default": ["core"]},
+            }), encoding="utf-8")
+            output = io.StringIO()
+
+            with (
+                patch.object(skill_drift, "CANONICAL_SKILL_ROOT", root / "store"),
+                contextlib.redirect_stdout(output),
+            ):
+                skill_drift.main(["--skill-config", str(config), "--offline", "--no-upstream"])
+
+            lines = " ".join(output.getvalue().split())
+            self.assertIn(
+                "core-skill: install missing — fix with "
+                "`agentic-install-skills-mcps --skill-profile default --yes`",
+                lines,
+            )
+            self.assertIn(
+                "extra-skill: install missing — fix with "
+                "`agentic-install-skills-mcps --skill-pack extra --skill extra-skill --yes`",
+                lines,
+            )
+
 
 class RemoteComparisonTests(unittest.TestCase):
     """Exercise the CLI against real package trees; replace only remote lookup/download."""
