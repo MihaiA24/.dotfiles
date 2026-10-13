@@ -56,7 +56,7 @@ To install the complete curated selection into the managed skill store:
 agentic-install-skills-mcps --skill-profile default --yes
 ```
 
-[The manifest](agentic_env/skill-packs.json) selects 38 skills. Use `--skill-pack` to select packs, `--skill` to filter their selected names, and `--skill-agent` to override the default `hermes,claude,codex` targets. `--skill-config` supplies a manifest with the same shape; a pack without a `skills` list installs all its contents.
+[The manifest](agentic_env/skill-packs.json) selects 41 skills. Use `--skill-pack` to select packs, `--skill` to filter their selected names, and `--skill-agent` to override the default `hermes,claude,codex` targets. `--skill-config` supplies a manifest with the same shape; a pack without a `skills` list installs all its contents.
 
 In flag-driven runs, explicit `--skill` or `--skills-dir` selections that resolve to no packages fail without installing anything. An intentionally empty interactive selection remains a successful no-op.
 
@@ -78,7 +78,7 @@ cd /path/to/your/dotfiles/agentic-env
 # Skip the destination prompts; still choose skills interactively.
 uv run agentic-install-skills-mcps --skills-dir "/path/to/project/.devin/skills"
 
-# All 38 curated skills without prompts.
+# All 41 curated skills without prompts.
 uv run agentic-install-skills-mcps \
   --skills-dir "/path/to/project/.devin/skills" --skill-profile default --yes
 
@@ -121,7 +121,7 @@ On macOS/Linux, the equivalent command from the checkout root is:
 python3 agentic-env/agentic_env/copy_skills.py --skills-dir "/path/to/project/.devin/skills"
 ```
 
-By default it copies the **30 vendored Matt/pstack skills**, including scripts and references, and lists the **8 remote-only caveman/ponytail skills it did not copy**. The manifest owns this roster. `--skill` accepts comma-separated or repeated names. An unavailable name or an empty `--skill` is an error; the copier never substitutes a different selection.
+By default it copies the **33 vendored Matt/pstack skills**, including scripts and references, and lists the **8 remote-only caveman/ponytail skills it did not copy**. The manifest owns this roster. `--skill` accepts comma-separated or repeated names. An unavailable name or an empty `--skill` is an error; the copier never substitutes a different selection.
 
 The copier accepts only `--skills-dir`, `--skill` and `--help`. Pack, profile and custom-manifest selectors, `--yes`, agent targets and MCP flags belong to `agentic-install-skills-mcps`. Success is the copy message plus exit status 0; in PowerShell, check `$LASTEXITCODE` immediately after the command.
 
