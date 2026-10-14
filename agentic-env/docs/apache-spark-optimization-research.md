@@ -1,20 +1,20 @@
-# Apache Spark optimization skill: research and design
+# Apache Spark skills: research and design
 
 ## Deliverable and review status
 
-The implementation is a single [`apache-spark`](../agentic_env/skills/apache-spark/SKILL.md) file. It targets optimization of existing jobs from completed-run evidence, not new pipeline design. This document keeps the detailed findings and citations for maintainers; the skill carries only the process. No representative user Spark job or benchmark was supplied or executed.
+The implementation has two independent, single-file skills: [`apache-spark-static`](../agentic_env/skills/apache-spark-static/SKILL.md) reviews existing code/initial plans with known, estimated, or unknown input volume; [`apache-spark-runtime`](../agentic_env/skills/apache-spark-runtime/SKILL.md) diagnoses live or completed cluster executions and verifies targeted optimizations. This document keeps detailed findings and citations for maintainers; neither skill loads a reference bundle or requires the other as a first step. No representative user Spark job or benchmark was supplied or executed.
 
 ## Design decisions
 
-- **Evidence before tuning:** completed action-specific final plans and attempt-aware metrics outrank initial EXPLAIN and generic knob recipes. Missing history limits conclusions and requires a safe future collection procedure.
+- **Evidence before tuning:** static findings are code/plan facts and conditional risks, not measured bottlenecks. Runtime findings use attempt-aware live observations or completed action-specific plans/metrics; live plans, populations, latency, and projected cost remain provisional. Missing history requires a safe collection procedure, not invented measurements.
 - **Optimize the objective:** critical-path end-to-end latency and allocated/billed resources are distinct from summed task time, fewer exchanges, or zero spill.
 - **Correctness is a gate:** retain duplicate/null/numeric/window and sink/layout semantics; use distributed multiset comparison for supported deterministic outputs, with contract-specific alternatives otherwise.
 - **Small causal experiments:** reduce data/work first, then justified plan/config/resource changes; exact runtime and deployment scope control applicability. No universal partition, broadcast, heap, or file-size prescriptions.
 - **Portable baseline:** no vendor engine, new dependency, log parser, automatic production rerun, or fabricated cost model. Existing UI/History Server/REST evidence is sufficient for the skill's workflow.
 - **Streaming boundary:** detect state/checkpoint/offset semantics before applying batch recipes; require an isolated connector-aware replay plan.
-- **Packaging:** first-party `agentic-env` pack at `agentic_env/skills`, selected explicitly. Existing default/minimal/agentic-only profiles remain unchanged. Python-only copying includes all locally packaged skills, so its complete roster gains this package. Wheel artifacts include it.
-- **Invocation:** model-invoked, unlike the manual-only pstack skills. Without the skill, the model scored 6/36 on open requests that never named it; manual-only invocation would forfeit the skill exactly there. The cost is one always-loaded description.
-- **Fingerprint status:** the content review below is recorded in `skill-fingerprints.json`. A first-party pack has no third-party upstream, so use `--no-upstream` for its source comparison.
+- **Packaging:** two first-party packages in the opt-in `agentic-env` pack at `agentic_env/skills`; the unsplit package is removed with no alias or router. Existing default/minimal/agentic-only profiles remain unchanged. Python-only copying includes both packages; wheel artifacts include them.
+- **Invocation:** both model-invoked on distinct evidence triggers. Original unsplit probes scored 6/36 without the process and 31/36 with it; those scores are historical, not an evaluation of the split. The current cost is two narrow always-loaded descriptions.
+- **Fingerprint status:** both reviewed packages are recorded in `skill-fingerprints.json`. A first-party pack has no third-party upstream, so use `--no-upstream` for source comparison.
 
 ## Research method and evidence limits
 
@@ -22,22 +22,22 @@ Two independent primary-source passes investigated execution interventions and c
 
 The sections retain their fact/recommendation distinction and full source ledgers. Code/REST examples are source-checked templates, not executed deployment requests. Synthetic fixture numbers only exercise reasoning and do not establish a real performance gain.
 
-## Initial implementation smoke evidence
+## Pre-split implementation smoke evidence
 
 - Affected existing suites: `tests/test_copy_skills.py`, `tests/test_install_skills_mcps.py`, `tests/test_stack_metadata.py`, and `tests/test_skill_drift.py` pass with the package installed through the Python-only copier, the native custom-directory route, and an offline-built wheel.
 - Source-only first-party drift inspection reported `source: new` until the content review recorded the baseline.
 - These are package and skill-decision checks, not real Spark execution, endpoint connectivity, harness auto-discovery, correctness proof for a user job, or performance measurements.
 
-## Why a single file: reference ablation
+## Original single-file reference ablation
 
-The first version shipped three reference files (diagnostics, optimization, verification; ~4,400 words). Stateless model runs compared no skill, the main file only, the full package, and a minimal main file with four sharpened rules and no references.
+Before the static/runtime split, the first version shipped three reference files (diagnostics, optimization, verification; ~4,400 words). Stateless model runs compared no skill, the main file only, the full package, and a minimal main file with four sharpened rules and no references.
 
 | Variant | Words loaded | Open-request process score |
 |---|---:|---:|
 | No skill | 0 | 6/36 |
 | Main file only | 788 | 28/36 |
 | Full package with references | 5,219 | 31/36 |
-| Minimal single file (shipped) | ~790 | 31/36 |
+| Minimal single file (pre-split) | ~790 | 31/36 |
 
 The score covers six behaviors on two open optimization requests (three runs each): runtime evidence before fixes, no unanchored configuration values, one change per experiment, output-equivalence checks, comparable before/after measurement, and flagging result-changing changes. On eight prompts that named a specific Spark trap (metric units, Arrow configuration scope, window salting, multiset comparison, checkpoint safety, AQE skew, final versus initial plan, missing telemetry), the base model passed all 16 runs without the skill: the reference facts were already default knowledge. The minimal file also passed the missing-telemetry, streaming and window-skew safety cases.
 
@@ -59,15 +59,48 @@ On the revised file, analysis-only requests stopped at the plan with ranked find
 
 Rejected as no-ops, because the shipped file already passed 3/3: checking platform-retained history (EMR persistent UI, History Server, `/var/log/spark/apps`) before declaring telemetry lost; quantifying wall time outside jobs; replaying fixed offsets into a fresh checkpoint and staging sink. Extending the measurement rule to "size targets" left a 128–512 MB file-size heuristic at 1/6 in both variants, so it was not adopted.
 
-Limits: one model, three to six runs per variant, a low-cost grader with every flagged result checked by hand. Description discovery, harness loading, and the shipped description wording were not tested.
+Limits: one model, three to six runs per variant, a low-cost grader with every flagged result checked by hand. These probes did not test description discovery or harness loading; the later OMP smoke below does.
+
+## Pre-split evidence-safety addition and harness smoke (2026-10-15)
+
+The intake now explicitly covers artifact authorization, private raw logs, and redaction before model ingestion or external sharing.
+
+- **Actual harness:** OMP 18.11.0 with `openai-codex/gpt-6.1-sol`, a temporary workspace containing the copied original package under `.claude/skills`, no saved session, extensions/rules disabled, and only the read tool enabled. Managed host skill roots were unchanged; the temporary workspace was removed.
+- **Discovery and behavior:** a synthetic natural-language request about a slow, spilling PySpark job did not name the skill. OMP loaded the original package. The response required sanitized derivatives instead of raw sensitive exports, distinguished the initial plan from completed-run evidence, marked performance unverified, and kept reruns outside analysis-only authorization.
+- **Limits:** one OMP run demonstrates discovery/loading and those decisions, not reliability across models/harnesses, real endpoint access, output equivalence, or Spark performance.
+
+## Static/runtime split and harness smoke (2026-10-15)
+
+Two fresh invocations used the same isolated OMP setup above, with both new packages copied into a temporary workspace. Neither request named a skill:
+
+- **Static review:** an existing PySpark job with unknown rows, bytes, files, join sizes, and key distribution selected only `apache-spark-static`. It delivered code-level findings without executing the workload, preserved duplicate/null/dimension multiplicity, treated driver collection as a return-contract decision, and proposed no invented sizing values or speedup.
+- **Live diagnosis:** an unfinished application with a nonfinal AQE plan, 124 successful tasks, and four active byte-heavy tasks selected only `apache-spark-runtime`. It separated observed imbalance from unproven key skew, kept successful-task statistics and elapsed time provisional, and requested read-only follow-up observations rather than changing configuration or rerunning.
+- **Packaging:** the actual Python-only copier selected both packages; the retired selection failed without creating its destination. An offline-built wheel contained both complete skills, matching source bytes, and no unsplit package.
+- **Limits:** one run per route, one model/harness, synthetic inputs, and read-only tools. This demonstrates the split's discovery and decisions, not cross-model reliability, actual cluster connectivity, output equivalence, or real performance.
+
+### Conditional-example smoke (2026-10-15)
+
+The static skill adds three compact examples with risks, conditions, and validation, not a tuning catalogue. One additional isolated OMP invocation supplied unknown volume and three unsafe proposals: plain `length` for a UTF-8-byte-count/null-to-zero UDF, removal of a required complete-list return, and deduplication of intentionally repeated join keys. It selected the static skill and rejected all three as stated, without external access or workload execution; alternatives remained contract-dependent and performance unverified.
+
+The existing copy/drift suites passed (26 tests, seven subtests), and source-only fingerprint checks reported no drift for either package. This is one model's reasoning smoke, not executed Spark correctness or performance proof.
+
+### Runtime conditional-example smoke (2026-10-15)
+
+The runtime skill adds three compact examples covering slow-task diagnosis, memory domains, and intermediate versus end-to-end metrics. Three additional isolated OMP invocations had both Spark skills discoverable and selected only the runtime skill:
+
+- **Slow tasks:** similar work volumes, high fetch wait, and one shared host did not establish key skew or justify salting. The response ranked fetch-path hypotheses and kept live populations/plans provisional.
+- **Memory:** a driver JVM heap failure during required list collection was distinguished from a successful spilling sort. The response retained the list contract, rejected unmeasured executor-heap doubling, and requested domain/working-set evidence.
+- **Completed comparison:** repeated synthetic candidate runs had less spill and a faster stage but worse completed action latency and allocated executor-seconds. The response rejected the candidate against the stated objective, reported variability, and left billed cost unknown.
+
+The existing copy/drift suites passed again (26 tests, seven subtests); both source fingerprints reported no drift. These are read-only, single-model reasoning probes with synthetic evidence, not real Spark executions, measured performance, or proof that the examples outperform the prior instructions.
 
 ## Open questions for a real job
 
-The probes answered the earlier falsifiability and authorization-boundary questions for hypothetical inputs. The rest needs one of the user's completed jobs:
+The probes and OMP smoke cover hypothetical decisions. Real-job validation still needs a representative job, sanitized completed-run artifacts, immutable inputs, an output contract, and authorization for isolated repeated baseline/candidate executions of the actual action/sink. None was supplied; no measured performance claim follows. Remaining workload questions:
 
 1. Does the intake accept the artifacts the user's deployment actually exposes: History Server, event logs, UI exports, and session configuration?
 2. Do the common jobs need additional connector/table-format-specific branches beyond the portable SQL/DataFrame/RDD baseline?
-3. Which Spark facts do real sessions miss? Add each as one line in `SKILL.md`, not as a new reference file.
+3. Which Spark facts do real sessions miss? Add each as one line in the affected skill's `SKILL.md`, not as a new reference file.
 
 ## Spark batch execution optimization research
 

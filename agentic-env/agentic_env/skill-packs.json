@@ -103,7 +103,8 @@
       "label": "agentic-env skills",
       "aliases": ["agentic-env"],
       "skills": [
-        { "name": "apache-spark", "description": "Optimize existing Spark jobs from completed-run evidence, preserving results and measuring gains" }
+        { "name": "apache-spark-static", "description": "Review Spark code and initial plans without runtime evidence; input volume may be unknown" },
+        { "name": "apache-spark-runtime", "description": "Diagnose live or completed Spark jobs from execution evidence and verify targeted optimizations" }
       ]
     }
   ],

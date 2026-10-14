@@ -18,7 +18,8 @@ Invoke the skill in your prompt with your harness's syntax, listed in [Invoke sk
 | You are resuming earlier work in this workspace | `/recall` |
 | Goals, constraints, or choices only a person can make | `/grilling` |
 | An unknown that an experiment can measure | `/prototype`, with the verifier |
-| An existing Spark job needs performance optimization | `/apache-spark` (opt-in): completed-run evidence, targeted experiments, output-equivalence and before/after proof |
+| Spark code needs review without execution evidence; input volume may be unknown | `/apache-spark-static` (opt-in): code/plan facts, conditional risks, minimal changes and validation plan |
+| An existing Spark job has live metrics or completed-run artifacts | `/apache-spark-runtime` (opt-in): evidence-backed diagnosis, targeted experiments, output-equivalence and before/after proof |
 | A new interface that callers will use | `/technical-writing` and `/codebase-design` |
 | A consequential doubt that evidence supports | `/interrogate` |
 | A settled design needs coordination across sessions or people | `/to-spec` or `/to-tickets` |
@@ -71,11 +72,13 @@ What tradeoffs did you make, and which parts did you verify?
 Check the current state before recommending the next action.
 ```
 
-## Optimize an existing Spark job from execution evidence
+## Choose Spark review by evidence
 
-Use [`/apache-spark`](../agentic_env/skills/apache-spark/SKILL.md) for an existing job's latency, throughput or cost problem. Supply the job and available completed-run artifacts; ask for analysis only when you want ranked experiments before edits. Static EXPLAIN without runtime evidence supports hypotheses, not a measured bottleneck or speedup.
+Use [`/apache-spark-static`](../agentic_env/skills/apache-spark-static/SKILL.md) for code and initial-plan review without running the workload. Known or estimated input volume refines the findings; unknown volume does not block review. Static findings cannot establish a measured bottleneck or speedup.
 
-This first-party skill is outside the default profiles; use the [Apache Spark installation route](../README.md#apache-spark-optimize-existing-jobs). It covers portable Apache behavior, not a mandatory vendor platform or cluster upgrade.
+Use [`/apache-spark-runtime`](../agentic_env/skills/apache-spark-runtime/SKILL.md) when live cluster metrics or completed-run artifacts are available. Live plans, task populations, duration, and cost remain provisional until the actual action finishes. Ask for analysis only when you want diagnosis and ranked experiments before edits or reruns.
+
+Both first-party skills are outside the default profiles; use the [Apache Spark installation route](../README.md#apache-spark-optimize-existing-jobs). Choose by available evidence, not job size; neither is a required first step for the other. Both preserve results and authorization boundaries without requiring a vendor platform or cluster upgrade.
 
 ## Settle human goals with grilling
 

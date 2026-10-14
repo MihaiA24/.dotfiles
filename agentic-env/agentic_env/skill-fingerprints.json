@@ -67,7 +67,8 @@
       "source": "./skills",
       "upstream": null,
       "skills": {
-        "apache-spark": "5e6a0645512ffb527ced656fb16ca267ac417205744814f1d9b6c16619b1ba48"
+        "apache-spark-static": "2cdb6b8d0601317db320527fa20efc6cabc636ab3ffa1c431746a7743a2f2aa3",
+        "apache-spark-runtime": "e41fcfa943684685809312f94321b6c16ecfae8b0b5ba3d80ffb6dc4f4d186c8"
       }
     }
   }
