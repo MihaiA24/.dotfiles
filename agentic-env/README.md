@@ -94,7 +94,7 @@ artifacts/spark-run/. Rank observations and hypotheses; if the job is still
 running, keep conclusions provisional. Do not edit or rerun.
 ```
 
-Each skill is a single `SKILL.md`; detailed Apache findings and version-pinned citations live in [research and design](docs/apache-spark-optimization-research.md) for maintainers, not in the agent's instructions. Existing profiles remain unchanged; `--all-skills` includes both packages. Their reviewed fingerprints are recorded in the baseline. A first-party pack has no upstream, so check its sources with `--pack agentic-env --no-upstream --no-installed`.
+Each skill is a single `SKILL.md`; detailed Apache findings and version-pinned citations live in [research and design](docs/apache-spark-optimization-research.md) for maintainers, not in the agent's instructions. Existing profiles remain unchanged; `--all-skills` includes both packages. Their reviewed fingerprints are recorded in the baseline. First-party upstream comparisons are automatically skipped; check the pack's sources with `--pack agentic-env --no-installed`.
 
 #### Install into another harness's directory
 
@@ -232,6 +232,8 @@ agentic-skill-drift --update-baseline
 
 This is a deterministic, on-demand CLI: no agent is needed to fetch or compare skills. It checks complete packages (including scripts and references), limited to the manifest's curated roster—not newly published, unselected skills. It does not execute upstream skills, merge updates, change pins, or overwrite installed skills.
 
+Recovery commands preserve a custom `--skill-config` and select missing opt-in skills instead of reinstalling an unrelated profile. Pack names are valid selectors without repeating them in `aliases`.
+
 To check **Matt Pocock and pstack from this checkout**, run from the repository root:
 
 ```bash
@@ -250,7 +252,7 @@ Add `--diff` for unified diffs; add `--json` for machine-readable results. `--di
 
 `--diff` shows **pinned → latest** changes for update review and **latest → local** differences to identify adaptations. JSON includes both diffs and the pinned/latest refs per skill; a null diff means it was not computed, while an empty string means no differences.
 
-Exit status: **0** no drift in requested checks; **1** drift detected (or invalid manifest/pack); **2** an incomplete check or invalid CLI usage. Unknown results take precedence over drift: a failed lookup/download is not a pass. `skipped` means explicitly disabled, not unknown.
+Exit status: **0** no drift in requested checks; **1** drift detected (or invalid manifest/pack); **2** an incomplete check or invalid CLI usage. Unknown results take precedence over drift: a failed lookup/download is not a pass. `skipped` means explicitly disabled or not applicable because the pack has no comparable upstream metadata, not unknown.
 
 This command has no `--skills-dir` override; the Installed column always checks the canonical managed store. Check standalone copies with [destination verification](#verify-and-refresh-standalone-copies) instead.
 

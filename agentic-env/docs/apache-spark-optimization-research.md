@@ -14,7 +14,7 @@ The implementation has two independent, single-file skills: [`apache-spark-stati
 - **Streaming boundary:** detect state/checkpoint/offset semantics before applying batch recipes; require an isolated connector-aware replay plan.
 - **Packaging:** two first-party packages in the opt-in `agentic-env` pack at `agentic_env/skills`; the unsplit package is removed with no alias or router. Existing default/minimal/agentic-only profiles remain unchanged. Python-only copying includes both packages; wheel artifacts include them.
 - **Invocation:** both model-invoked on distinct evidence triggers. Original unsplit probes scored 6/36 without the process and 31/36 with it; those scores are historical, not an evaluation of the split. The current cost is two narrow always-loaded descriptions.
-- **Fingerprint status:** both reviewed packages are recorded in `skill-fingerprints.json`. A first-party pack has no third-party upstream, so use `--no-upstream` for source comparison.
+- **Fingerprint status:** both reviewed packages are recorded in `skill-fingerprints.json`. Source-only checks use `--pack agentic-env --no-installed`; upstream comparisons are automatically skipped because this first-party pack has no third-party upstream.
 
 ## Research method and evidence limits
 
