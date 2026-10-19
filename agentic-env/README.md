@@ -367,6 +367,8 @@ Keep that HOME for inspection/rechecks; use a new empty directory for another fr
 
 [CI](../.github/workflows/agentic-env-smoke-test.yml) runs native macOS arm64, Debian x86_64 and Arch x86_64 acceptance only after the Python suite and Bun retention-canary regressions pass. Each acceptance job runs fresh installation, then checks-only with forced updates on all three hosts. OMP resolves the latest stable GitHub release redirect and verifies its release asset against `SHA256SUMS.txt`, without the rate-limited REST release lookup or credentials. [Run manually](https://github.com/MihaiA24/.dotfiles/actions/workflows/agentic-env-smoke-test.yml) when needed.
 
+Linux acceptance uses a non-fail-fast Debian/Arch matrix; each leg retains the same container for both passes. The Compose services share common settings, with separate Dockerfiles and an opt-in Arch profile.
+
 The independent **Windows Python-only skill copy** job uses `windows-latest` and Python 3.12 to run the dependency-free checks above. It covers complete vendored copies, reported remote exclusions, selection errors, collision preflight and refusal to copy into a source package. It does not install agents or MCPs or validate skill workflows.
 
 On 2026-09-22, that [Windows job passed](https://github.com/MihaiA24/.dotfiles/actions/runs/35761661410/job/106860923046) at [`d9bff13`](https://github.com/MihaiA24/.dotfiles/commit/d9bff133715b6b3e063b705381c682bc52934d8e). This is copier acceptance, separate from the historical full-stack evidence below.
