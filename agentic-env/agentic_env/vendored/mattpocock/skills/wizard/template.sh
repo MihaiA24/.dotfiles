@@ -89,16 +89,18 @@ confirm() {
   [[ "$reply" =~ ^[Yy] ]]
 }
 
-# _existing KEY: current value of KEY in ENV_FILE, if any, with write_env's single
-# quotes or a plain dotenv double-quoted value undone.
+# _existing KEY: a literal single-line dotenv value, without evaluating shell
+# syntax. Refuse quoted forms we cannot round-trip rather than keep a wrong value.
 _existing() {
   [[ -f "$ENV_FILE" ]] || return 1
-  local line value sq="'\\''"; line=$(grep -E "^${1}=" "$ENV_FILE" | tail -n1) || return 1
+  local line value; line=$(grep -E "^${1}=" "$ENV_FILE" | tail -n1) || return 1
   value="${line#*=}"
-  if [[ "$value" == \'*\' ]]; then value="${value:1:${#value}-2}"; value="${value//"$sq"/\'}"
+  if [[ "$value" == \'*\' ]]; then
+    value="${value:1:${#value}-2}"
+    [[ "$value" == *\'* ]] && return 1
   elif [[ "$value" == \"*\" ]]; then
     value="${value:1:${#value}-2}"
-    [[ "$value" == *[\\\$\"]* ]] && return 1   # escapes, $ or ": can't decode safely; ask again
+    [[ "$value" == *\"* || "$value" == *'\n'* || "$value" == *'\r'* ]] && return 1
   fi
   printf '%s' "$value"
 }
@@ -134,15 +136,27 @@ ask_secret() {
   printf -v "$key" '%s' "$input"
 }
 
-# write_env KEY VALUE upserts KEY='VALUE' into ENV_FILE (replaces any existing
-# line) and sets $KEY. Idempotent. Creates ENV_FILE at mode 0600; writes through
-# a symlink and keeps an existing file's mode.
+# write_env KEY VALUE upserts a literal single-line dotenv value and sets $KEY.
+# Creates ENV_FILE at mode 0600; writes through a symlink and keeps existing mode.
+# ponytail: literal quotes only; use a consumer-specific serializer for mixed
+# quotes or apostrophes combined with literal \n/\r sequences.
 write_env() {
-  local key="$1" value="$2" tmp sq="'\\''"
+  local key="$1" value="$2" tmp quote="'"
+  if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    printf 'Cannot write %s: write_env requires a single-line value.\n' "$key" >&2
+    return 1
+  fi
+  if [[ "$value" == *\'* ]]; then
+    if [[ "$value" == *\"* || "$value" == *'\n'* || "$value" == *'\r'* ]]; then
+      printf 'Cannot write %s losslessly: use a serializer for your dotenv consumer.\n' "$key" >&2
+      return 1
+    fi
+    quote='"'
+  fi
   [[ -e "$ENV_FILE" ]] || (umask 077 && : > "$ENV_FILE")
   tmp=$(mktemp)
   grep -vE "^${key}=" "$ENV_FILE" > "$tmp" || true
-  printf "%s='%s'\n" "$key" "${value//\'/$sq}" >> "$tmp"
+  printf '%s=%s%s%s\n' "$key" "$quote" "$value" "$quote" >> "$tmp"
   cat "$tmp" > "$ENV_FILE"
   rm -f "$tmp"
   printf -v "$key" '%s' "$value"
