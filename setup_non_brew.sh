@@ -7,7 +7,7 @@
 set -euo pipefail
 
 _SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
-. "$_SCRIPT_DIR/agentic-env/setup_helpers.sh"
+. "$_SCRIPT_DIR/setup_helpers.sh"
 
 # ── AI tools ───────────────────────────────────────────────────────────────────
 # Installs to ~/.local/bin/claude

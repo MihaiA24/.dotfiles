@@ -52,14 +52,4 @@ Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./se
 
 ## Agentic environment and skill installation
 
-Choose the [installation route](./agentic-env/README.md#choose-an-installation-path) for the task:
-
-- **Full agent stack, macOS/Linux:** [bootstrap and prerequisites](./agentic-env/README.md#quick-usage), then the [clean-platform acceptance runbook](./agentic-env/README.md#clean-platform-acceptance).
-- **Existing OMP host:** [refresh managed skills](./agentic-env/README.md#refresh-skills-on-an-existing-omp-host) without reinstalling agents or MCPs.
-- **Another harness's directory:** [copy selected curated packs](./agentic-env/README.md#install-into-another-harnesss-directory) with the native skills CLI.
-- **Windows or offline copying:** [Python-only runbook](./agentic-env/README.md#python-only-copy-on-windows), using the vendored packages; this does not provision the Windows agent stack.
-- **Existing standalone copies:** [verify and refresh safely](./agentic-env/README.md#verify-and-refresh-standalone-copies); global doctor, drift and update commands do not manage these destinations.
-
-The [CI workflow](./.github/workflows/agentic-env-smoke-test.yml) runs full-stack macOS/Linux acceptance and a separate Windows copier-only check on relevant pushes/PRs, or through **Run workflow**. [Recorded evidence](./agentic-env/README.md#ci-and-recorded-evidence) names the scope of each result.
-
-Policy: [operative decisions](./agentic-env/DECISIONS_AI_TOOLING.md), [domain vocabulary](./agentic-env/docs/CONTEXT.md), and [ADRs](./agentic-env/docs/adr/).
+The agent stack (OMP/Hermes provisioning, curated skills, MCPs, hooks and the stack doctor) lives in [MihaiA24/agentic-env](https://github.com/MihaiA24/agentic-env). Its history up to the split is preserved there; [`d479743`](https://github.com/MihaiA24/.dotfiles/tree/d479743315c6611ae4df4799a9dc573ab63ed478/agentic-env) is the last commit with the code here.
