@@ -89,28 +89,40 @@ confirm() {
   [[ "$reply" =~ ^[Yy] ]]
 }
 
-# _existing KEY: a literal single-line dotenv value, without evaluating shell
-# syntax. Refuse quoted forms we cannot round-trip rather than keep a wrong value.
+# _existing KEY prints KEY's single-line dotenv value without evaluating shell
+# syntax: quotes and inline " # comments" are read the way dotenv readers do.
+# Returns 1 if KEY is absent, or 2 for forms dotenv readers disagree on or
+# write_env cannot round-trip, so callers never keep a wrong value.
 _existing() {
   [[ -f "$ENV_FILE" ]] || return 1
-  local line value; line=$(grep -E "^${1}=" "$ENV_FILE" | tail -n1) || return 1
+  local line value q rest bad=0
+  line=$(grep -E "^${1}=" "$ENV_FILE" | tail -n1) || return 1
   value="${line#*=}"
-  if [[ "$value" == \'*\' ]]; then
-    value="${value:1:${#value}-2}"
-    [[ "$value" == *\'* ]] && return 1
-  elif [[ "$value" == \"*\" ]]; then
-    value="${value:1:${#value}-2}"
-    [[ "$value" == *\"* || "$value" == *'\n'* || "$value" == *'\r'* ]] && return 1
+  value="${value#"${value%%[![:space:]]*}"}"
+  q="${value:0:1}"
+  if [[ "$q" == \' || "$q" == \" ]]; then
+    rest="${value:1}"; value="${rest%%"$q"*}"; rest="${rest:${#value}}"
+    # rest is the closing quote plus an optional "# comment"; empty if unclosed.
+    [[ "$rest" =~ ^.[[:space:]]*(#.*)?$ ]] || bad=1
+    [[ "$q" == \' || ( "$value" != *'\n'* && "$value" != *'\r'* ) ]] || bad=1
+  else
+    value="${value%%[[:space:]]#*}"
+    value="${value%"${value##*[![:space:]]}"}"
+    [[ "$q" != '`' && "$value" != *\#* ]] || bad=1
+  fi
+  if (( bad )); then
+    printf 'Cannot keep %s: rewrite its %s line as a plain single-line value.\n' "$1" "$ENV_FILE" >&2
+    return 2
   fi
   printf '%s' "$value"
 }
 
 # ask KEY "Prompt" reads a value into $KEY. Offers the existing .env value as
-# a default on re-runs (Enter keeps it). Visible input (non-secret), edited
-# with Readline. Fails at EOF with no input.
+# a default on re-runs (Enter keeps it); fails if that value can't be kept.
+# Visible input (non-secret), edited with Readline. Fails at EOF with no input.
 ask() {
   local key="$1" prompt="$2" current input s=$'\001' e=$'\002' p rc=0
-  current=$(_existing "$key" || true)
+  current=$(_existing "$key") || (( $? == 1 )) || return 1
   # Readline needs the colour codes wrapped in \001..\002 to place the cursor.
   p="  $s$BOLD$e$prompt$s$RESET$e "
   [[ -n "$current" ]] && p+="$s$DIM$e[Enter keeps current]$s$RESET$e "
@@ -123,7 +135,7 @@ ask() {
 # ask_secret KEY "Prompt" is like ask, but input is hidden.
 ask_secret() {
   local key="$1" prompt="$2" current input rc=0
-  current=$(_existing "$key" || true)
+  current=$(_existing "$key") || (( $? == 1 )) || return 1
   if [[ -n "$current" ]]; then
     printf '  %s%s%s %s[Enter keeps current]%s ' "$BOLD" "$prompt" "$RESET" "$DIM" "$RESET"
   else
