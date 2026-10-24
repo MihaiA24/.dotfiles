@@ -1,5 +1,5 @@
 _SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
-. "$_SCRIPT_DIR/agentic-env/setup_helpers.sh"
+. "$_SCRIPT_DIR/setup_helpers.sh"
 
 run_cmd "rm ~/.zshrc"
 run_cmd "rm ~/.zshenv"

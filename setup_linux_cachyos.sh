@@ -1,7 +1,7 @@
 # In this scripts go all CMD lines that can be executed from scratch without 0 addional config or manual download
 
 _SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
-. "$_SCRIPT_DIR/agentic-env/setup_helpers.sh"
+. "$_SCRIPT_DIR/setup_helpers.sh"
 
 run_cmd "sudo paru" # Update all installed
 
