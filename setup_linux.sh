@@ -17,9 +17,6 @@ run_cmd "curl -fsS https://dl.brave.com/install.sh | sh"
 # Install ZED editor
 run_cmd "curl -f https://zed.dev/install.sh | sh"
 
-# Install UV python package manager
-run_cmd "curl -LsSf https://astral.sh/uv/install.sh | sh"
-
 # Install Homebrew
 run_cmd "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | sh"
 run_cmd "sudo apt-get install build-essential" # Homebrew recommendation
