@@ -52,4 +52,4 @@ Tools installed outside of Homebrew are documented in [`setup_non_brew.sh`](./se
 
 ## Agentic environment and skill installation
 
-The agent stack (OMP/Hermes provisioning, curated skills, MCPs, hooks and the stack doctor) lives in [MihaiA24/agentic-env](https://github.com/MihaiA24/agentic-env). Its history up to the split is preserved there; [`d479743`](https://github.com/MihaiA24/.dotfiles/tree/d479743315c6611ae4df4799a9dc573ab63ed478/agentic-env) is the last commit with the code here.
+The agent stack (OMP/Hermes provisioning, curated skills, MCPs, hooks and the stack doctor) moved to a separate private repository, `MihaiA24/agentic-env`, which keeps its history up to the split. [`d479743`](https://github.com/MihaiA24/.dotfiles/tree/d479743315c6611ae4df4799a9dc573ab63ed478/agentic-env) is the last public commit with that code here.
